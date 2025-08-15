@@ -89,30 +89,30 @@ WSGI_APPLICATION = 'afan_backend.wsgi.application'
 #         'PORT': '5432',
 #     }
 # }
-
-
 import dj_database_url
 import os
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL')
-    )
-}
-
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME':  'dfngskbcjmpik3',
-        'USER': 'ucqj5fb2s0c3mc',
-        'PASSWORD': 'e81549aa2ca6774743c57779c0ff4f7ed21929736f45740c1c17b751c4a31237',
-        'HOST': 'cd7f19r8oktbkp.cluster-czrs8kj4isg7.us-east-1.rds.amazonaws.com',
-        'PORT': '5432',
-
+if os.environ.get('DATABASE_URL'):
+    # On Heroku or production, pull from env var
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=os.environ['DATABASE_URL'],
+            conn_max_age=600,
+            ssl_require=True
+        )
     }
-}
-
+else:
+    # Local development DB
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'dfngskbcjmpik3',
+            'USER': 'ucqj5fb2s0c3mc',
+            'PASSWORD': 'e81549aa2ca6774743c57779c0ff4f7ed21929736f45740c1c17b751c4a31237',
+            'HOST': 'cd7f19r8oktbkp.cluster-czrs8kj4isg7.us-east-1.rds.amazonaws.com',
+            'PORT': '5432',
+        }
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
