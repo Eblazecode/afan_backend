@@ -55,9 +55,15 @@ MIDDLEWARE = [
 ]
 
 # CORS settings
-CORS_ALLOW_ALL_ORIGINS = True
+
 ROOT_URLCONF = 'afan_backend.urls'
 
+
+
+CORS_ALLOWED_ORIGINS = [
+    "https://www.afannigerian.com",
+    "https://afannigerian.com",
+]
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
