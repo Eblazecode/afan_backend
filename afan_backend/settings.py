@@ -67,8 +67,8 @@ ROOT_URLCONF = 'afan_backend.urls'
 
 
 CORS_ALLOWED_ORIGINS = [
-    "https://www.afannigerian.com",
-    "https://afannigerian.com",
+    "https://www.afannigeria.com",
+    "https://afannigeria.com",
     "https://afan-blond.vercel.app",
 ]
 
