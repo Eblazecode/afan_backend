@@ -25,7 +25,13 @@ SECRET_KEY = 'django-insecure-ilj2zi=jbwl@(0t$a^xhn2$-i^pkp09mb2mw1(f-((gs5u!0n&
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["https://afanbackend-98907b88a05c.herokuapp.com/"]
+ALLOWED_HOSTS = [
+    "afanbackend-98907b88a05c.herokuapp.com",
+    "www.afannigeria.com",
+    "afannigeria.com"
+    "localhost",
+    "afan-blond.vercel.app",
+]
 
 
 # Application definition
@@ -44,6 +50,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -51,7 +58,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
+
 ]
 
 # CORS settings
@@ -63,7 +70,11 @@ ROOT_URLCONF = 'afan_backend.urls'
 CORS_ALLOWED_ORIGINS = [
     "https://www.afannigerian.com",
     "https://afannigerian.com",
+    "https://afan-blond.vercel.app",
 ]
+
+CORS_ALLOW_CREDENTIALS = True
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
