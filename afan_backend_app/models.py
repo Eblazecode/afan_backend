@@ -9,6 +9,14 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 import re
 
+class Member (models.Model):
+    name = models.CharField(max_length=100)
+    email = models.EmailField()
+
+    def __str__(self):
+        return self.name
+
+
 class KYCSubmission(models.Model):
     FARM_TYPES = [
         ('Crop Farming', 'Crop Farming'),
