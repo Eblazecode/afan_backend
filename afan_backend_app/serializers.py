@@ -35,6 +35,7 @@ class KYCSubmissionSerializer(serializers.ModelSerializer):
             'farmType',
             'farmSize',
             'yearsOfExperience',
+            'membership_id',
             'primaryCrops',
             'farmLocation',
             'passportPhoto',

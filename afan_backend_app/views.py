@@ -96,6 +96,7 @@ def login_member(request):
                 'id': user.id,
                 'email': user.email,
                 'name': user.get_full_name(),  # or user.username or user.name
+                'member_id':getattr(user,'member_id') or getattr(user.profile, 'member_id', None),  # Assuming you have a UserProfile model
             }
         })
     else:
@@ -137,7 +138,7 @@ from .serializers import KYCSubmissionSerializer
 
 from rest_framework.parsers import MultiPartParser, FormParser
 
-class KYCSubmissionView(APIView):
+class KYCSubmissionView_agent(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]  # 👈 Accept file uploads
 
@@ -155,6 +156,29 @@ class KYCSubmissionView(APIView):
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+
+
+class KYCSubmissionView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]  # 👈 Accept file uploads
+
+    def post(self, request):
+        try:
+            serializer = KYCSubmissionSerializer(
+                data=request.data,
+                context={'request': request}
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save(user=request.user)  # 👈 Attach authenticated user
+
+            return Response({'message': 'KYC submitted successfully'}, status=status.HTTP_201_CREATED)
+
+        except ValidationError as ve:
+            return Response({'error': ve.detail}, status=status.HTTP_400_BAD_REQUEST)
+        except ObjectDoesNotExist:
+            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # views.py
