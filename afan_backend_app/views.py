@@ -247,7 +247,6 @@ class KYCSubmissionView_agent(APIView):
 
 
 class KYCSubmissionView(APIView):
-    permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]  # 👈 Accept file uploads
 
     def post(self, request):
@@ -256,8 +255,6 @@ class KYCSubmissionView(APIView):
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
                 # Optionally, you can update the user's kycStatus here
-                user = request.user
-                user.kycStatus = 'submitted'
 
                 return Response({'message': 'KYC submitted successfully'}, status=status.HTTP_201_CREATED)
         except ValidationError as ve:

@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from . import views
-from .views import MemberViewSet, register_member, get_user_profile, KYCSubmissionView
+from .views import MemberViewSet, register_member, get_user_profile, KYCSubmissionView, KYCSubmissionView_agent
 from django.urls import path
 
 
@@ -20,7 +20,7 @@ urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('user/', get_user_profile, name='get_user_profile'),
     # farmers membership registration related endpoints
-    path('kyc/submit/', KYCSubmissionView.as_view(), name='kyc-submit'),
+    path('kyc/submit/', KYCSubmissionView_agent.as_view(), name='kyc-submit'),
 
     #payment related endpoints
 

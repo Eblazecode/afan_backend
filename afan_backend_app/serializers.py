@@ -20,7 +20,7 @@ class MemberSerializer(serializers.ModelSerializer):
 
 
 from rest_framework import serializers
-from .models import KYCSubmission
+from .models import KYCSubmission, Member
 
 class KYCSubmissionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -40,12 +40,3 @@ class KYCSubmissionSerializer(serializers.ModelSerializer):
             'passportPhoto',
             'membership_id',
         ]
-
-    def create(self, validated_data):
-        user = self.context['request'].user  # Get the authenticated user
-
-        # Ensure only one KYCSubmission per user
-        if KYCSubmission.objects.filter(user=user).exists():
-            raise serializers.ValidationError("KYC already submitted.")
-
-        return KYCSubmission.objects.create(user=user, **validated_data)
