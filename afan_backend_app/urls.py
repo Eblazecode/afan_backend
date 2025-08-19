@@ -5,7 +5,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from . import views
 from .views import MemberViewSet, register_member, get_user_profile, KYCSubmissionView
 from django.urls import path
-from .views import initiate_payment, verify_payment
+
 
 router = DefaultRouter()
 router.register(r'members', MemberViewSet, basename='member')
