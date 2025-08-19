@@ -3,6 +3,7 @@ import hmac
 from venv import logger
 
 from django.contrib.auth import authenticate
+from django.contrib.auth.hashers import make_password
 from django.shortcuts import render
 
 # Create your views here.
@@ -71,22 +72,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Member  # your custom Member model
 
 
-@api_view(['POST'])
-@permission_classes([AllowAny])
-def register_member(request):
-    data = request.data
-    name = data.get('name')
-    email = data.get('email')
-    password = data.get('password')
-    state = data.get('state')
-    lga = data.get('lga')
-
-    if not all([name, email, password, state, lga]):
-        return Response({'error': 'Missing fields'}, status=status.HTTP_400_BAD_REQUEST)
-
-    if Member.objects.filter(email=email).exists():
-        return Response({'error': 'User already exists'}, status=status.HTTP_400_BAD_REQUEST)
-
+def gen_membership_id(state, lga):
     # Generate membership ID
     prefix = "AFAN"
     cleaned_state = re.sub(r'\W+', '', str(state)).upper()[:3].ljust(3, 'X')
@@ -98,30 +84,55 @@ def register_member(request):
     if not re.match(r"^AFAN/[A-Z]{3}/[A-Z]{3}/\d{5}$", gen_membership_id):
         return Response({'error': 'Invalid membership ID format'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    # Create member
-    user = Member.objects.create(
-        first_name=name,
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+
+@api_view(['POST'])
+def register(request):
+    data = request.data
+    name = data.get('name')
+    email = data.get('email')
+    password = data.get('password')
+    state = data.get('state')
+    lga = data.get('lga')
+
+    if not all([name, email, password, state, lga]):
+        return Response({'error': 'Missing fields'}, status=400)
+
+    # if  email exists
+    if Member.objects.filter(email=email).exists():
+        return Response({'error': 'user already already exists'}, status=400)
+
+    # split full name into first/last
+    parts = name.strip().split(" ", 1)
+    first_name = parts[0]
+    last_name = parts[1] if len(parts) > 1 else ""
+
+    member = Member.objects.create(
         email=email,
-        password=password,
+        first_name=first_name,
+        last_name=last_name,
         state=state,
         lga=lga,
-        membership_id=gen_membership_id
+        password=make_password(password),  # hash password
+        membership_id=gen_membership_id(state, lga),  # your custom function
     )
 
-    refresh = RefreshToken.for_user(user)  # If using JWT with custom user, ensure your authentication backend supports it
-
+    refresh = RefreshToken.for_user(member)
     return Response({
-        'refresh': str(refresh),
-        'access': str(refresh.access_token),
-        'user': {
-            'id': user.id,
-            'membership_id': user.membership_id,
-            'name': user.first_name,
-            'email': user.email,
-            'state': user.state,
-            'lga': user.lga
-        }
-    })
+        "user": {
+            "id": member.id,
+            "name": f"{member.first_name} {member.last_name}".strip(),
+            "email": member.email,
+            "membership_id": member.membership_id,
+            "state": member.state,
+            "lga": member.lga,
+        },
+        "refresh": str(refresh),
+        "access": str(refresh.access_token),
+    }, status=201)
+
 
 
 # login view for members
