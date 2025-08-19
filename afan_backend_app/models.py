@@ -114,7 +114,7 @@ class KYCSubmission(models.Model):
         ('Other', 'Other'),
     ]
 
-    user = models.OneToOneField(User, on_delete=models.CASCADE, default="")
+    user = models.OneToOneField(settings.AUTH_USER_MODEL , on_delete=models.CASCADE, default="")
     firstName = models.CharField(max_length=100)
     lastName = models.CharField(max_length=100)
     phoneNumber = models.CharField(max_length=11)
