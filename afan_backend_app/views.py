@@ -72,17 +72,21 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Member  # your custom Member model
 
 
-def gen_membership_id(state, lga):
-    # Generate membership ID
+def gen_membership_id_func(state, lga):
+    import re
     prefix = "AFAN"
     cleaned_state = re.sub(r'\W+', '', str(state)).upper()[:3].ljust(3, 'X')
     cleaned_lga = re.sub(r'\W+', '', str(lga)).upper()[:3].ljust(3, 'X')
     count = Member.objects.filter(state=state, lga=lga).count() + 1
     unique_code = str(count).zfill(5)
+
     gen_membership_id = f"{prefix}/{cleaned_state}/{cleaned_lga}/{unique_code}"
 
+    # validate format
     if not re.match(r"^AFAN/[A-Z]{3}/[A-Z]{3}/\d{5}$", gen_membership_id):
-        return Response({'error': 'Invalid membership ID format'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        raise ValueError("Invalid membership ID format")
+
+    return gen_membership_id  # ✅ return the value
 
 
 @api_view(['POST'])
@@ -109,6 +113,19 @@ def register_member(request):
     first_name = parts[0]
     last_name = parts[1] if len(parts) > 1 else ""
 
+    import re
+    prefix = "AFAN"
+    cleaned_state = re.sub(r'\W+', '', str(state)).upper()[:3].ljust(3, 'X')
+    cleaned_lga = re.sub(r'\W+', '', str(lga)).upper()[:3].ljust(3, 'X')
+    count = Member.objects.filter(state=state, lga=lga).count() + 1
+    unique_code = str(count).zfill(5)
+
+    gen_membership_id = f"{prefix}/{cleaned_state}/{cleaned_lga}/{unique_code}"
+
+    # validate format
+    if not re.match(r"^AFAN/[A-Z]{3}/[A-Z]{3}/\d{5}$", gen_membership_id):
+        raise ValueError("Invalid membership ID format")
+
     member = Member.objects.create(
         email=email,
         first_name=first_name,
@@ -116,7 +133,7 @@ def register_member(request):
         state=state,
         lga=lga,
         password=make_password(password),  # hash password
-        membership_id=gen_membership_id(state, lga),  # your custom function
+        membership_id= gen_membership_id,  # your custom function
     )
 
     refresh = RefreshToken.for_user(member)

@@ -34,7 +34,7 @@ class Member(models.Model):
     last_name = models.CharField(max_length=100, blank=True, default="last_name")
     state = models.CharField(max_length=100, default="state")
     lga = models.CharField(max_length=100, default="lga")
-    membership_id = models.CharField(max_length=50, unique=True, blank=True, null=True, default="membership_id")
+    membership_id = models.CharField(max_length=50, unique=True, blank=True, null=False, default="membership_id")
     password = models.CharField(max_length=128, default='password')  # store hashed password
     registration_date = models.DateTimeField(auto_now_add=True)
 
