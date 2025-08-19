@@ -32,7 +32,7 @@ ALLOWED_HOSTS = [
     "afan-blond.vercel.app",
 ]
 
-AUTH_USER_MODEL = 'afan_backend_app.CustomUser'
+
 
 # Application definition
 
