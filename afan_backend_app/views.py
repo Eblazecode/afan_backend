@@ -250,14 +250,23 @@ from rest_framework import status
 from .models import KYCSubmission  # make sure your model is imported
 
 
-@api_view(['POST'])
-@permission_classes([AllowAny])
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import AllowAny
+from rest_framework.parsers import MultiPartParser, FormParser
+from .models import KYCSubmission
+
+
 class KYCSubmissionView(APIView):
+    permission_classes = [AllowAny]
+    parser_classes = [MultiPartParser, FormParser]  # to handle file uploads
+
     def post(self, request, *args, **kwargs):
         try:
             data = request.data
 
-            # Extract fields directly from request
+            # Extract fields
             first_name = data.get('firstName')
             last_name = data.get('lastName')
             phone_number = data.get('phoneNumber')
@@ -269,38 +278,33 @@ class KYCSubmissionView(APIView):
             years_of_experience = data.get('yearsOfExperience')
             primary_crops = data.get('primaryCrops')
             farm_location = data.get('farmLocation')
-            passport_photo = request.FILES.get('passportPhoto')  # file handling
+            passport_photo = request.FILES.get('passportPhoto')
             membership_id = data.get('membership_id')
 
-            # Create record directly
+            # Create record
             kyc = KYCSubmission.objects.create(
-                first_name=first_name,
-                last_name=last_name,
-                phone_number=phone_number,
+                firstName=first_name,
+                lastName=last_name,
+                phoneNumber=phone_number,
                 address=address,
                 state=state,
                 lga=lga,
-                farm_type=farm_type,
-                farm_size=farm_size,
-                years_of_experience=years_of_experience,
-                primary_crops=primary_crops,
-                farm_location=farm_location,
-                passport_photo=passport_photo,
+                farmType=farm_type,
+                farmSize=farm_size,
+                yearsOfExperience=years_of_experience,
+                primaryCrops=primary_crops,
+                farmLocation=farm_location,
+                passportPhoto=passport_photo,
                 membership_id=membership_id
             )
-            # Save the KYC submission
-
 
             return Response(
-                {"message": "farmers record submission successful", "id": kyc.id},
+                {"message": "Farmer record submission successful", "id": kyc.id},
                 status=status.HTTP_201_CREATED
             )
 
         except Exception as e:
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 
