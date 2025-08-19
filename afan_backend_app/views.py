@@ -87,9 +87,7 @@ def gen_membership_id(state, lga):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-
-@api_view(['POST'])
-def register(request):
+def register_member(request):
     data = request.data
     name = data.get('name')
     email = data.get('email')
