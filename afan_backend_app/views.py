@@ -164,7 +164,7 @@ def login_member(request):
     email = request.data.get('email')
     password = request.data.get('password')
 
-    if not email or not password:
+    if email is None or password is None:
         return Response({'error': 'Email and password are required'}, status=400)
 
     try:
@@ -172,28 +172,23 @@ def login_member(request):
     except Member.DoesNotExist:
         return Response({'error': 'Invalid email or password'}, status=401)
 
-    # Verify password (assuming you hashed it using Django's password system)
     if not check_password(password, member.password):
         return Response({'error': 'Invalid email or password'}, status=401)
 
-    # If Member is not a subclass of AbstractUser, we can't directly use RefreshToken.for_user
-    # So we create a token manually
-    refresh = RefreshToken.for_user(member.user) if hasattr(member, 'user') else RefreshToken()
-
-    # Add custom claims if needed
-    refresh['member_id'] = str(member.id)
-    refresh['email'] = member.email
+    refresh = RefreshToken.for_user(member)
 
     return Response({
-        'access': str(refresh.access_token),
-        'refresh': str(refresh),
-        'user': {
-            'id': member.id,
-            'email': member.email,
-            'name': getattr(member, 'name', ''),
-            'membership_id': getattr(member, 'member_id', None),
-        }
-    })
+        "user": {
+            "id": member.id,
+            "name": f"{member.first_name} {member.last_name}".strip(),
+            "email": member.email,
+            "membership_id": member.membership_id,   # ✅ now included
+            "state": member.state,
+            "lga": member.lga,
+        },
+        "refresh": str(refresh),
+        "access": str(refresh.access_token),
+    }, status=200)
 
 
 
