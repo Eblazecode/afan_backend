@@ -117,4 +117,6 @@ class Payment(models.Model):
     def __str__(self):
         return f"Payment {self.transaction_id} - {self.user.username} - {self.amount} - {self.payment_status}"
 
+# fetch membership_id
+
 

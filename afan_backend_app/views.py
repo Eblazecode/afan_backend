@@ -167,15 +167,10 @@ class KYCSubmissionView(APIView):
 
     def post(self, request):
         try:
-            serializer = KYCSubmissionSerializer(
-                data=request.data,
-                context={'request': request}
-            )
-            serializer.is_valid(raise_exception=True)
-            serializer.save(user=request.user)  # 👈 Attach authenticated user
-
-            return Response({'message': 'KYC submitted successfully'}, status=status.HTTP_201_CREATED)
-
+            serializer = KYCSubmissionSerializer(data=request.data, context={'request': request})
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+                return Response({'message': 'KYC submitted successfully'}, status=status.HTTP_201_CREATED)
         except ValidationError as ve:
             return Response({'error': ve.detail}, status=status.HTTP_400_BAD_REQUEST)
         except ObjectDoesNotExist:
