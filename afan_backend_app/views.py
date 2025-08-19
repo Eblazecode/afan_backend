@@ -11,7 +11,6 @@ from django.conf import settings
 
 from rest_framework import viewsets, status, permissions
 from rest_framework.authtoken.admin import User
-from rest_framework.decorators
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
