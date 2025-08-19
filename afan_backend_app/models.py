@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from django.contrib.auth.models import User
 from django.db import models
 
@@ -27,14 +29,14 @@ from django.db import models
 from django.contrib.auth.hashers import make_password
 
 class Member(models.Model):
-    email = models.EmailField(unique=True)
-    first_name = models.CharField(max_length=100)
-    last_name = models.CharField(max_length=100, blank=True)
-    state = models.CharField(max_length=100)
-    lga = models.CharField(max_length=100)
-    membership_id = models.CharField(max_length=50, unique=True, blank=True)
+    email = models.EmailField(unique=True , default="email")
+    first_name = models.CharField(max_length=100, default="first_name")
+    last_name = models.CharField(max_length=100, blank=True, default="last_name")
+    state = models.CharField(max_length=100, default="state")
+    lga = models.CharField(max_length=100, default="lga")
+    membership_id = models.CharField(max_length=50, unique=True, blank=True, null=True, default="membership_id")
     password = models.CharField(max_length=128)  # store hashed password
-    registration_date = models.DateTimeField(auto_now_add=True)
+    registration_date = models.DateTimeField(auto_now_add=True, default=datetime.now)
 
     def save(self, *args, **kwargs):
         if not self.id and self.password:  # hash password on creation
