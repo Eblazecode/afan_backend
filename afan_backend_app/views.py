@@ -151,32 +151,49 @@ def register_member(request):
     }, status=201)
 
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth.hashers import check_password
+from .models import Member   # import your Member model
 
-# login view for members
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_member(request):
     email = request.data.get('email')
     password = request.data.get('password')
 
-    if email is None or password is None:
+    if not email or not password:
         return Response({'error': 'Email and password are required'}, status=400)
 
-    user = authenticate(request, username=email, password=password)
-    if user is not None:
-        refresh = RefreshToken.for_user(user)
-        return Response({
-            'access': str(refresh.access_token),
-            'refresh': str(refresh),
-            'user': {
-                'id': user.id,
-                'email': user.email,
-                'name': user.get_full_name(),  # or user.username or user.name
-                'member_id':getattr(user,'member_id') or getattr(user.profile, 'member_id', None),  # Assuming you have a UserProfile model
-            }
-        })
-    else:
+    try:
+        member = Member.objects.get(email=email)
+    except Member.DoesNotExist:
         return Response({'error': 'Invalid email or password'}, status=401)
+
+    # Verify password (assuming you hashed it using Django's password system)
+    if not check_password(password, member.password):
+        return Response({'error': 'Invalid email or password'}, status=401)
+
+    # If Member is not a subclass of AbstractUser, we can't directly use RefreshToken.for_user
+    # So we create a token manually
+    refresh = RefreshToken.for_user(member.user) if hasattr(member, 'user') else RefreshToken()
+
+    # Add custom claims if needed
+    refresh['member_id'] = str(member.id)
+    refresh['email'] = member.email
+
+    return Response({
+        'access': str(refresh.access_token),
+        'refresh': str(refresh),
+        'user': {
+            'id': member.id,
+            'email': member.email,
+            'name': getattr(member, 'name', ''),
+            'membership_id': getattr(member, 'member_id', None),
+        }
+    })
 
 
 
