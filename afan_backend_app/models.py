@@ -1,6 +1,88 @@
 from django.contrib.auth.models import User
 from django.db import models
 
+from django.contrib.auth.models import AbstractUser
+from django.db import models
+import uuid
+import re
+from django.db import models
+from django.core.exceptions import ValidationError
+from django.contrib.auth.models import AbstractUser
+
+
+
+from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.db import models
+import uuid
+
+
+import re
+from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.core.exceptions import ValidationError
+from django.db import models
+
+
+class CustomUserManager(BaseUserManager):
+    def create_user(self, email, password=None, **extra_fields):
+        if not email:
+            raise ValueError("The Email field must be set")
+        email = self.normalize_email(email)
+        user = self.model(email=email, username=email, **extra_fields)
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Superuser must have is_staff=True.")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Superuser must have is_superuser=True.")
+
+        return self.create_user(email, password, **extra_fields)
+
+
+class CustomUser(AbstractUser):
+    username = models.CharField(max_length=150, unique=True)
+    email = models.EmailField(unique=True)
+    membership_id = models.CharField(max_length=30, unique=True, blank=True, null=True)
+    state = models.CharField(max_length=100, blank=True, null=True)
+    lga = models.CharField(max_length=100, blank=True, null=True)
+
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["username"]
+
+    objects = CustomUserManager()
+
+    def save(self, *args, **kwargs):
+        if not self.membership_id:   # Generate only if empty
+            if not self.state or not self.lga:
+                raise ValidationError("State and LGA must be provided to generate membership ID.")
+
+            prefix = "AFAN"
+
+            # Clean and normalize
+            cleaned_state = re.sub(r'\W+', '', str(self.state)).upper()[:3].ljust(3, 'X')
+            cleaned_lga = re.sub(r'\W+', '', str(self.lga)).upper()[:3].ljust(3, 'X')
+
+            # Count existing for uniqueness
+            count = CustomUser.objects.filter(state=self.state, lga=self.lga).count() + 1
+            unique_code = str(count).zfill(5)
+
+            # Generate ID
+            self.membership_id = f"{prefix}/{cleaned_state}/{cleaned_lga}/{unique_code}"
+
+            # Validate format
+            if not re.match(r"^AFAN/[A-Z]{3}/[A-Z]{3}/\d{5}$", self.membership_id):
+                raise ValidationError("membership_id must match format: AFAN/XXX/YYY/00001")
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.email
+
 
 
 # Create your models here.
@@ -65,46 +147,11 @@ class KYCSubmission(models.Model):
     def __str__(self):
         return f"{self.firstName} {self.lastName} - {self.phoneNumber}"
 
-    def save(self, *args, **kwargs):
-        if not self.state or not self.lga:
-            raise ValidationError("State and LGA must be provided to generate membership ID.")
 
-        if not self.membership_id:
-            prefix = "AFAN"
-
-            # Safely process state and lga
-            cleaned_state = re.sub(r'\W+', '', str(self.state)).upper()[:3].ljust(3, 'X')
-            cleaned_lga = re.sub(r'\W+', '', str(self.lga)).upper()[:3].ljust(3, 'X')
-
-            count = KYCSubmission.objects.filter(state=self.state, lga=self.lga).count() + 1
-            unique_code = str(count).zfill(5)
-
-            self.membership_id = f"{prefix}/{cleaned_state}/{cleaned_lga}/{unique_code}"
-
-        if not re.match(r"^AFAN/[A-Z]{3}/[A-Z]{3}/\d{5}$", self.membership_id):
-            raise ValidationError("membership_id must match format: AFAN/XXX/YYY/00001")
-
-        # ✅ Save KYCSubmission
-        super().save(*args, **kwargs)
-
-        # ✅ Also update User profile with this membership_id
-        if self.user:
-            self.user.profile.member_id = self.membership_id  # If using UserProfile
-            # OR if you added member_id directly to User via migration
-            # self.user.member_id = self.membership_id
-            self.user.save(update_fields=["member_id"])
 
     # display the membership ID to frontend
-    def get_membership_id(self):
-        return self.membership_id if self.membership_id else "Not Assigned"
-    # -*- coding: utf-8 -*-
 
-class UserProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
-    member_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
 
-    def __str__(self):
-        return f"{self.user.username} Profile"
 
 # payments model
 class Payment(models.Model):

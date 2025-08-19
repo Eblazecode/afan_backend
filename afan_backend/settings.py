@@ -32,6 +32,7 @@ ALLOWED_HOSTS = [
     "afan-blond.vercel.app",
 ]
 
+AUTH_USER_MODEL = 'afan_backend_app.CustomUser'
 
 # Application definition
 
@@ -150,6 +151,7 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
 
 
 # Internationalization

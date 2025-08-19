@@ -23,7 +23,13 @@ from rest_framework import status
 from .models import KYCSubmission
 from .serializers import KYCSubmissionSerializer
 
-
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.conf import settings
+from django.contrib.auth import get_user_model
 
 
 class MemberViewSet(viewsets.ModelViewSet):
@@ -45,6 +51,17 @@ class MemberViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+
+User = get_user_model()
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from .models import CustomUser
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_member(request):
@@ -53,18 +70,22 @@ def register_member(request):
     name = request.data.get('name')
     email = request.data.get('email')
     password = request.data.get('password')
+    state = request.data.get('state')
+    lga = request.data.get('lga')
 
     if not all([name, email, password]):
         return Response({'error': 'Missing fields'}, status=status.HTTP_400_BAD_REQUEST)
 
-    if User.objects.filter(username=email).exists():
+    if CustomUser.objects.filter(email=email).exists():
         return Response({'error': 'User already exists'}, status=status.HTTP_400_BAD_REQUEST)
 
-    user = User.objects.create_user(
-        username=email,
+    user = CustomUser.objects.create_user(
+        username=email,   # username = email
         email=email,
         password=password,
-        first_name=name
+        first_name=name,
+        state=state,
+        lga=lga
     )
 
     refresh = RefreshToken.for_user(user)
@@ -74,10 +95,14 @@ def register_member(request):
         'access': str(refresh.access_token),
         'user': {
             'id': user.id,
+            'membership_id': user.membership_id,  # 👈 auto-generated
             'name': user.first_name,
             'email': user.email,
+            'state': user.state,
+            'lga': user.lga
         }
     })
+
 
 # login view for members
 @api_view(['POST'])
@@ -170,6 +195,10 @@ class KYCSubmissionView(APIView):
             serializer = KYCSubmissionSerializer(data=request.data, context={'request': request})
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
+                # Optionally, you can update the user's kycStatus here
+                user = request.user
+                user.kycStatus = 'submitted'
+
                 return Response({'message': 'KYC submitted successfully'}, status=status.HTTP_201_CREATED)
         except ValidationError as ve:
             return Response({'error': ve.detail}, status=status.HTTP_400_BAD_REQUEST)
