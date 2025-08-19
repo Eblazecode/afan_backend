@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 
 from django.contrib.auth.models import User
@@ -34,11 +35,15 @@ class Member(models.Model):
     last_name = models.CharField(max_length=100, blank=True, default="last_name")
     state = models.CharField(max_length=100, default="state")
     lga = models.CharField(max_length=100, default="lga")
-    membership_id = models.CharField(max_length=50, unique=True, blank=True, null=False, default="membership_id")
+    membership_id = models.CharField(max_length=50, unique=True, blank=True, null=False)
     password = models.CharField(max_length=128, default='password')  # store hashed password
     registration_date = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
+        # Auto-generate membership ID if not set
+        if not self.membership_id:
+            self.membership_id = f"MEM-{uuid.uuid4().hex[:8].upper()}"
+
         if not self.id and self.password:  # hash password on creation
             self.password = make_password(self.password)
         super().save(*args, **kwargs)
