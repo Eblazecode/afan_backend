@@ -16,7 +16,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Member, ProfileAccounts
+from .models import Member
 from .serializers import MemberSerializer
 from rest_framework.response import Response
 from rest_framework.views import APIView
