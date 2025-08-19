@@ -20,7 +20,7 @@ urlpatterns = [
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('user/', get_user_profile, name='get_user_profile'),
     # farmers membership registration related endpoints
-    path('kyc/submit/', KYCSubmissionView_agent.as_view(), name='kyc-submit'),
+    path('kyc/submit/', KYCSubmissionView.as_view(), name='kyc-submit'),
 
     #payment related endpoints
 

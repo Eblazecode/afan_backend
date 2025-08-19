@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+from urllib import request
 from venv import logger
 
 from django.contrib.auth import authenticate
@@ -227,7 +228,6 @@ from .serializers import KYCSubmissionSerializer
 from rest_framework.parsers import MultiPartParser, FormParser
 
 class KYCSubmissionView_agent(APIView):
-    permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]  # 👈 Accept file uploads
 
     def post(self, request):
@@ -244,25 +244,64 @@ class KYCSubmissionView_agent(APIView):
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from .models import KYCSubmission  # make sure your model is imported
 
 
+@api_view(['POST'])
+@permission_classes([AllowAny])
 class KYCSubmissionView(APIView):
-    parser_classes = [MultiPartParser, FormParser]  # 👈 Accept file uploads
-
-    def post(self, request):
+    def post(self, request, *args, **kwargs):
         try:
-            serializer = KYCSubmissionSerializer(data=request.data, context={'request': request})
-            if serializer.is_valid(raise_exception=True):
-                serializer.save()
-                # Optionally, you can update the user's kycStatus here
+            data = request.data
 
-                return Response({'message': 'KYC submitted successfully'}, status=status.HTTP_201_CREATED)
-        except ValidationError as ve:
-            return Response({'error': ve.detail}, status=status.HTTP_400_BAD_REQUEST)
-        except ObjectDoesNotExist:
-            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+            # Extract fields directly from request
+            first_name = data.get('firstName')
+            last_name = data.get('lastName')
+            phone_number = data.get('phoneNumber')
+            address = data.get('address')
+            state = data.get('state')
+            lga = data.get('lga')
+            farm_type = data.get('farmType')
+            farm_size = data.get('farmSize')
+            years_of_experience = data.get('yearsOfExperience')
+            primary_crops = data.get('primaryCrops')
+            farm_location = data.get('farmLocation')
+            passport_photo = request.FILES.get('passportPhoto')  # file handling
+            membership_id = data.get('membership_id')
+
+            # Create record directly
+            kyc = KYCSubmission.objects.create(
+                first_name=first_name,
+                last_name=last_name,
+                phone_number=phone_number,
+                address=address,
+                state=state,
+                lga=lga,
+                farm_type=farm_type,
+                farm_size=farm_size,
+                years_of_experience=years_of_experience,
+                primary_crops=primary_crops,
+                farm_location=farm_location,
+                passport_photo=passport_photo,
+                membership_id=membership_id
+            )
+            # Save the KYC submission
+
+
+            return Response(
+                {"message": "farmers record submission successful", "id": kyc.id},
+                status=status.HTTP_201_CREATED
+            )
+
         except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
 
 
 #
