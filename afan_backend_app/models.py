@@ -1,20 +1,6 @@
 from django.contrib.auth.models import User
 from django.db import models
 
-from django.contrib.auth.models import AbstractUser
-from django.db import models
-import uuid
-import re
-from django.db import models
-from django.core.exceptions import ValidationError
-from django.contrib.auth.models import AbstractUser
-
-
-
-from django.contrib.auth.models import AbstractUser, BaseUserManager
-from django.db import models
-import uuid
-
 
 import re
 from django.contrib.auth.models import AbstractUser, BaseUserManager
@@ -83,8 +69,6 @@ class CustomUser(AbstractUser):
     def __str__(self):
         return self.email
 
-
-
 # Create your models here.
 class Member(models.Model):
     firstname = models.CharField(max_length=100, default="")
@@ -150,8 +134,16 @@ class KYCSubmission(models.Model):
 
 
     # display the membership ID to frontend
+    def get_membership_id(self):
+        return self.membership_id if self.membership_id else "Not Assigned"
+    # -*- coding: utf-8 -*-
 
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
+    member_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
 
+    def __str__(self):
+        return f"{self.user.username} Profile"
 
 # payments model
 class Payment(models.Model):
