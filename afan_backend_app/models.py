@@ -93,7 +93,7 @@ class KYCSubmission(models.Model):
     # -*- coding: utf-8 -*-
 
 class UserProfile(models.Model):
-    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name="profile")
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     member_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
 
     def __str__(self):
