@@ -95,6 +95,8 @@ def register_member(request):
     state = data.get('state')
     lga = data.get('lga')
 
+
+    print("Received data:", data)  # Debugging line to check received data
     if not all([name, email, password, state, lga]):
         return Response({'error': 'Missing fields'}, status=400)
 
