@@ -25,9 +25,6 @@ urlpatterns = [
     #payment related endpoints
 
 
-    path('api/initiate-payment/', initiate_payment, name='initiate_payment'),
-    path('api/verify-payment/', verify_payment, name='verify_payment'),
-    path('api/payment/verify/', views.paystack_webhook,name='webhook'),  # optional webhook hand
 
 ]
 
