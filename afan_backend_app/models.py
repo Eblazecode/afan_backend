@@ -10,89 +10,42 @@ from django.conf import settings
 
 
 
-class CustomUserManager(BaseUserManager):
-    def create_user(self, email, password=None, **extra_fields):
-        if not email:
-            raise ValueError("The Email field must be set")
-        email = self.normalize_email(email)
-        user = self.model(email=email, username=email, **extra_fields)
-        user.set_password(password)
-        user.save(using=self._db)
-        return user
-
-    def create_superuser(self, email, password=None, **extra_fields):
-        extra_fields.setdefault("is_staff", True)
-        extra_fields.setdefault("is_superuser", True)
-
-        if extra_fields.get("is_staff") is not True:
-            raise ValueError("Superuser must have is_staff=True.")
-        if extra_fields.get("is_superuser") is not True:
-            raise ValueError("Superuser must have is_superuser=True.")
-
-        return self.create_user(email, password, **extra_fields)
 
 
-class CustomUser(AbstractUser):
-    username = models.CharField(max_length=150, unique=True)
+# Create your models here.
+import re
+from django.db import models
+from django.core.exceptions import ValidationError
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework_simplejwt.tokens import RefreshToken
+
+# Custom user model
+from django.db import models
+from django.contrib.auth.hashers import make_password
+
+class Member(models.Model):
     email = models.EmailField(unique=True)
-    membership_id = models.CharField(max_length=30, unique=True, blank=True, null=True)
-    state = models.CharField(max_length=100, blank=True, null=True)
-    lga = models.CharField(max_length=100, blank=True, null=True)
-
-    USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["username"]
-
-    objects = CustomUserManager()
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100, blank=True)
+    state = models.CharField(max_length=100)
+    lga = models.CharField(max_length=100)
+    membership_id = models.CharField(max_length=50, unique=True, blank=True)
+    password = models.CharField(max_length=128)  # store hashed password
+    registration_date = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
-        if not self.membership_id:   # Generate only if empty
-            if not self.state or not self.lga:
-                raise ValidationError("State and LGA must be provided to generate membership ID.")
-
-            prefix = "AFAN"
-
-            # Clean and normalize
-            cleaned_state = re.sub(r'\W+', '', str(self.state)).upper()[:3].ljust(3, 'X')
-            cleaned_lga = re.sub(r'\W+', '', str(self.lga)).upper()[:3].ljust(3, 'X')
-
-            # Count existing for uniqueness
-            count = CustomUser.objects.filter(state=self.state, lga=self.lga).count() + 1
-            unique_code = str(count).zfill(5)
-
-            # Generate ID
-            self.membership_id = f"{prefix}/{cleaned_state}/{cleaned_lga}/{unique_code}"
-
-            # Validate format
-            if not re.match(r"^AFAN/[A-Z]{3}/[A-Z]{3}/\d{5}$", self.membership_id):
-                raise ValidationError("membership_id must match format: AFAN/XXX/YYY/00001")
-
+        if not self.id and self.password:  # hash password on creation
+            self.password = make_password(self.password)
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return self.email
-
-# Create your models here.
-class Member(models.Model):
-    firstname = models.CharField(max_length=100, default="")
-    lastname = models.CharField(max_length=100, default="")
-    phone_number = models.CharField(max_length=15, unique=True)
-    state = models.CharField(max_length=100)
-    lga = models.CharField(max_length=100)
-    residential_address = models.TextField(max_length=100,default="")
-    payment_status = models.BooleanField(default=False)
-    registration_date = models.DateTimeField(auto_now_add=True)
-    farming_type = models.CharField(max_length=100)
-    farm_size = models.DecimalField(max_digits=10, decimal_places=2)
-    farm_location = models.CharField(max_length=255)
-    farming_years = models.IntegerField(default=0)
-    farm_description = models.TextField(blank=True, null=True)
-    profile_picture = models.ImageField(upload_to='profile_pictures/', blank=True, null=True)
-    is_active = models.BooleanField(default=True)
-    membership_id = models.CharField(max_length=50, unique=True, default="")
+        return f"{self.first_name} {self.last_name or ''}"
 
 
-    def __str__(self):
-        return self.full_name
+
 
 
 

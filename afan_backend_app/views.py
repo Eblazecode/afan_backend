@@ -16,7 +16,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import  Member
+from .models import Member, ProfileAccounts
 from .serializers import MemberSerializer
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -61,43 +61,62 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import CustomUser
+
+import re
+from django.core.exceptions import ValidationError
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework_simplejwt.tokens import RefreshToken
+from .models import Member  # your custom Member model
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_member(request):
-    print("Incoming data:", request.data)
+    data = request.data
+    name = data.get('name')
+    email = data.get('email')
+    password = data.get('password')
+    state = data.get('state')
+    lga = data.get('lga')
 
-    name = request.data.get('name')
-    email = request.data.get('email')
-    password = request.data.get('password')
-    state = request.data.get('state')
-    lga = request.data.get('lga')
-
-    if not all([name, email, password]):
+    if not all([name, email, password, state, lga]):
         return Response({'error': 'Missing fields'}, status=status.HTTP_400_BAD_REQUEST)
 
-    if CustomUser.objects.filter(email=email).exists():
+    if Member.objects.filter(email=email).exists():
         return Response({'error': 'User already exists'}, status=status.HTTP_400_BAD_REQUEST)
 
-    user = CustomUser.objects.create_user(
-        username=email,   # username = email
+    # Generate membership ID
+    prefix = "AFAN"
+    cleaned_state = re.sub(r'\W+', '', str(state)).upper()[:3].ljust(3, 'X')
+    cleaned_lga = re.sub(r'\W+', '', str(lga)).upper()[:3].ljust(3, 'X')
+    count = Member.objects.filter(state=state, lga=lga).count() + 1
+    unique_code = str(count).zfill(5)
+    gen_membership_id = f"{prefix}/{cleaned_state}/{cleaned_lga}/{unique_code}"
+
+    if not re.match(r"^AFAN/[A-Z]{3}/[A-Z]{3}/\d{5}$", gen_membership_id):
+        return Response({'error': 'Invalid membership ID format'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # Create member
+    user = Member.objects.create(
+        first_name=name,
         email=email,
         password=password,
-        first_name=name,
         state=state,
-        lga=lga
+        lga=lga,
+        membership_id=gen_membership_id
     )
 
-    refresh = RefreshToken.for_user(user)
+    refresh = RefreshToken.for_user(user)  # If using JWT with custom user, ensure your authentication backend supports it
 
     return Response({
         'refresh': str(refresh),
         'access': str(refresh.access_token),
         'user': {
             'id': user.id,
-            'membership_id': user.membership_id,  # 👈 auto-generated
+            'membership_id': user.membership_id,
             'name': user.first_name,
             'email': user.email,
             'state': user.state,
