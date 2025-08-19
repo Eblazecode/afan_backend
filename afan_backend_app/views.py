@@ -6,6 +6,8 @@ from django.contrib.auth import authenticate
 from django.shortcuts import render
 
 # Create your views here.
+from django.conf import settings
+
 
 from rest_framework import viewsets, status, permissions
 from rest_framework.authtoken.admin import User

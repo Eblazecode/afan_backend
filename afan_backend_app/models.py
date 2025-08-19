@@ -6,6 +6,8 @@ import re
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.conf import settings
+
 
 
 class CustomUserManager(BaseUserManager):
@@ -139,7 +141,7 @@ class KYCSubmission(models.Model):
     # -*- coding: utf-8 -*-
 
 class UserProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile")
     member_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
 
     def __str__(self):
@@ -147,7 +149,7 @@ class UserProfile(models.Model):
 
 # payments model
 class Payment(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_date = models.DateTimeField(auto_now_add=True)
     payment_status = models.CharField(max_length=20, choices=[('Pending', 'Pending'), ('Completed', 'Completed'), ('Failed', 'Failed')], default='Pending')
