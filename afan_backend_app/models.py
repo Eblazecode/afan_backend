@@ -114,7 +114,7 @@ class KYCSubmission(models.Model):
         ('Other', 'Other'),
     ]
 
-    user = models.OneToOneField(settings.AUTH_USER_MODEL , on_delete=models.CASCADE, default="")
+    user = models.OneToOneField(CustomUser , on_delete=models.CASCADE, default="")
     firstName = models.CharField(max_length=100)
     lastName = models.CharField(max_length=100)
     phoneNumber = models.CharField(max_length=11)
@@ -141,7 +141,7 @@ class KYCSubmission(models.Model):
     # -*- coding: utf-8 -*-
 
 class UserProfile(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="profile")
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE, related_name="profile")
     member_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
 
     def __str__(self):
@@ -149,7 +149,7 @@ class UserProfile(models.Model):
 
 # payments model
 class Payment(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     payment_date = models.DateTimeField(auto_now_add=True)
     payment_status = models.CharField(max_length=20, choices=[('Pending', 'Pending'), ('Completed', 'Completed'), ('Failed', 'Failed')], default='Pending')
