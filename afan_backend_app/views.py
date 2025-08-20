@@ -133,7 +133,7 @@ def register_member(request):
         last_name=last_name,
         state=state,
         lga=lga,
-        password=make_password(password),  # hash password
+        password=password,
         membership_id= gen_membership_id,  # your custom function
     )
 
