@@ -257,10 +257,16 @@ from rest_framework.permissions import AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser
 from .models import KYCSubmission
 
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.response import Response
+from rest_framework import status
+from .models import KYCSubmission
 
 class KYCSubmissionView(APIView):
-    permission_classes = [AllowAny]
-    parser_classes = [MultiPartParser, FormParser]  # to handle file uploads
+    permission_classes = [AllowAny]  # 👈 anyone can access
+    parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request, *args, **kwargs):
         try:
@@ -305,7 +311,4 @@ class KYCSubmissionView(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-
-
 #
