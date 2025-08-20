@@ -168,10 +168,16 @@ def login_member(request):
     if email is None or password is None:
         return Response({'error': 'Email and password are required'}, status=400)
 
+
+
     try:
         member = Member.objects.get(email=email)
     except Member.DoesNotExist:
         return Response({'error': 'Invalid email or password'}, status=401)
+    print(member.password)  # hashed value
+    print(email)
+    print(password)  # plain password
+    print(check_password(password, member.password))  # T
 
     if not check_password(password, member.password):
         return Response({'error': 'Invalid email or password'}, status=401)
