@@ -280,8 +280,17 @@ class KYCSubmissionView(APIView):
     def post(self, request, *args, **kwargs):
         try:
             data = request.data
+            files = request.FILES
 
-            # Extract fields from frontend (camelCase)
+            # Debugging received payloads
+            print("====== DEBUG START ======")
+            print("Raw request data:", data)
+            print("Raw request files:", files)
+            print("Membership ID received:", data.get('membership_id'))
+            print("Passport photo received:", files.get('passportPhoto'))
+            print("====== DEBUG END ======")
+
+            # Extract fields
             first_name = data.get('firstName')
             last_name = data.get('lastName')
             phone_number = data.get('phoneNumber')
@@ -294,40 +303,41 @@ class KYCSubmissionView(APIView):
             years_of_experience = data.get('yearsOfExperience')
             primary_crops = data.get('primaryCrops')
             farm_location = data.get('farmLocation')
-            passport_photo = request.FILES.get('passportPhoto')
+            passport_photo = files.get('passportPhoto')
             membership_id = data.get('membership_id')
 
-            # Debugging logs
-            print("Received data:", data)
-            print("Membership ID:", membership_id)
+            # Extra check for membership_id being readonly
+            if not membership_id:
+                print("⚠️ Membership ID is missing from request!")
+            else:
+                print("✅ Membership ID included:", membership_id)
 
-            # ✅ Map to Django model fields (snake_case)
+            # Create record
             kyc = KYCSubmission.objects.create(
-                first_name=first_name,
-                last_name=last_name,
-                phone_number=phone_number,
+                firstName=first_name,
+                lastName=last_name,
+                phoneNumber=phone_number,
                 nin=nin,
                 address=address,
                 state=state,
                 lga=lga,
-                farm_type=farm_type,
-                farm_size=farm_size,
-                years_of_experience=years_of_experience,
-                primary_crops=primary_crops,
-                farm_location=farm_location,
-                passport_photo=passport_photo,
+                farmType=farm_type,
+                farmSize=farm_size,
+                yearsOfExperience=years_of_experience,
+                primaryCrops=primary_crops,
+                farmLocation=farm_location,
+                passportPhoto=passport_photo,
                 membership_id=membership_id,
-                kyc_status="approved",  # default status
+                kycStatus="approved",  # default status
             )
 
             return Response(
-                {"message": "Farmer record submission successful", "id": kyc.id},
+                {"message": "Farmer record submission successful", "id": kyc.membership_id},
                 status=status.HTTP_201_CREATED
             )
 
         except Exception as e:
-            import traceback
-            print("❌ Error in KYCSubmissionView:", traceback.format_exc())  # full stack trace in logs
+            print("❌ ERROR in KYCSubmissionView:", str(e))
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 # verify payment
