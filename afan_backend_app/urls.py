@@ -25,7 +25,7 @@ urlpatterns = [
     path('kyc/submit/', KYCSubmissionView.as_view(), name='kyc-submit'),
 
     #payment related endpoints
-    path("api/payments/verify/<str:reference>/", views.verify_payment, name="verify-payment"),
+    path("payments/verify/<str:reference>/", views.verify_payment, name="verify-payment"),
 
 
 
