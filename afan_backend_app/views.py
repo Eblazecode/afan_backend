@@ -192,6 +192,8 @@ def login_member(request):
             "membership_id": member.membership_id,   # ✅ now included
             "state": member.state,
             "lga": member.lga,
+            "kycStatus": member.kycStatus,
+            "transaction_id": member.transaction_id if hasattr(member, 'transaction_id') else None,
         },
         "refresh": str(refresh),
         "access": str(refresh.access_token),
@@ -282,6 +284,7 @@ class KYCSubmissionView(APIView):
             first_name = data.get('firstName')
             last_name = data.get('lastName')
             phone_number = data.get('phoneNumber')
+            nin = data.get('nin')
             address = data.get('address')
             state = data.get('state')
             lga = data.get('lga')
@@ -293,11 +296,13 @@ class KYCSubmissionView(APIView):
             passport_photo = request.FILES.get('passportPhoto')
             membership_id = data.get('membership_id')
 
+
             # Create record
             kyc = KYCSubmission.objects.create(
                 firstName=first_name,
                 lastName=last_name,
                 phoneNumber=phone_number,
+                nin = nin,
                 address=address,
                 state=state,
                 lga=lga,
@@ -307,7 +312,8 @@ class KYCSubmissionView(APIView):
                 primaryCrops=primary_crops,
                 farmLocation=farm_location,
                 passportPhoto=passport_photo,
-                membership_id=membership_id
+                membership_id=membership_id,
+                kycStatus="approved",  # default status
             )
 
             return Response(
@@ -318,3 +324,39 @@ class KYCSubmissionView(APIView):
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 #
+# verify payment
+import requests
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework import status
+from django.conf import settings
+from .models import Member
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def verify_payment(request):
+    data = request.data
+    transaction_id = data.get('transaction_id')
+    membership_id = data.get('membership_id')
+
+    if not transaction_id or not membership_id:
+        return Response("error", status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        # Verify with Paystack
+        headers = {"Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}"}
+        url = f"https://api.paystack.co/transaction/verify/{transaction_id}"
+        response = requests.get(url, headers=headers).json()
+
+        if response.get("status") and response["data"]["status"] == "success":
+            # Update member payment status
+            member = Member.objects.get(membership_id=membership_id)
+            member.paymentStatus = True
+            member.save()
+            return Response("success", status=status.HTTP_200_OK)
+
+        return Response("error", status=status.HTTP_400_BAD_REQUEST)
+
+    except Member.DoesNotExist:
+        return Response("error", status=status.HTTP_404_NOT_FOUND)

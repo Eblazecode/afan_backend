@@ -38,6 +38,9 @@ class Member(models.Model):
     membership_id = models.CharField(max_length=50, unique=True, blank=True, null=False)
     password = models.CharField(max_length=128, default='password')  # store hashed password
     registration_date = models.DateTimeField(auto_now_add=True)
+    kycStatus = models.CharField(default="not_submitted")  # KYC status
+    paymentStatus = models.BooleanField(default=False)  # Payment status
+
 
     def save(self, *args, **kwargs):
         # Auto-generate membership ID if not set
@@ -77,6 +80,7 @@ class KYCSubmission(models.Model):
     firstName = models.CharField(max_length=100)
     lastName = models.CharField(max_length=100)
     phoneNumber = models.CharField(max_length=11)
+    nin = models.CharField(max_length=11, unique=True, blank=True, null=True, default=None)
     address = models.TextField()
     state = models.CharField(max_length=100)
     lga = models.CharField(max_length=100)
