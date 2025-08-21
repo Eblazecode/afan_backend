@@ -350,7 +350,9 @@ from django.conf import settings
 import requests
 from .models import Member
 
+
 @api_view(["POST"])
+@permission_classes([AllowAny])
 def verify_payment(request):
     data = request.data
     transaction_id = data.get('transaction_id')
