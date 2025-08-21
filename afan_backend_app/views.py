@@ -281,7 +281,7 @@ class KYCSubmissionView(APIView):
         try:
             data = request.data
 
-            # Extract fields
+            # Extract fields from frontend (camelCase)
             first_name = data.get('firstName')
             last_name = data.get('lastName')
             phone_number = data.get('phoneNumber')
@@ -297,36 +297,39 @@ class KYCSubmissionView(APIView):
             passport_photo = request.FILES.get('passportPhoto')
             membership_id = data.get('membership_id')
 
+            # Debugging logs
+            print("Received data:", data)
+            print("Membership ID:", membership_id)
 
-            # Create record
+            # ✅ Map to Django model fields (snake_case)
             kyc = KYCSubmission.objects.create(
-                firstName=first_name,
-                lastName=last_name,
-                phoneNumber=phone_number,
-                nin = nin,
+                first_name=first_name,
+                last_name=last_name,
+                phone_number=phone_number,
+                nin=nin,
                 address=address,
                 state=state,
                 lga=lga,
-                farmType=farm_type,
-                farmSize=farm_size,
-                yearsOfExperience=years_of_experience,
-                primaryCrops=primary_crops,
-                farmLocation=farm_location,
-                passportPhoto=passport_photo,
+                farm_type=farm_type,
+                farm_size=farm_size,
+                years_of_experience=years_of_experience,
+                primary_crops=primary_crops,
+                farm_location=farm_location,
+                passport_photo=passport_photo,
                 membership_id=membership_id,
-                kycStatus="approved",  # default status
+                kyc_status="approved",  # default status
             )
 
-            print("Received data:", data)  # Debugging line to check received data
             return Response(
                 {"message": "Farmer record submission successful", "id": kyc.id},
                 status=status.HTTP_201_CREATED
             )
 
-
         except Exception as e:
+            import traceback
+            print("❌ Error in KYCSubmissionView:", traceback.format_exc())  # full stack trace in logs
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-#
+
 # verify payment
 # views.py
 @api_view(['POST'])
