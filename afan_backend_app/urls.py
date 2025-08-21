@@ -3,7 +3,8 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from . import views
-from .views import MemberViewSet, register_member, get_user_profile, KYCSubmissionView, KYCSubmissionView_agent
+from .views import MemberViewSet, register_member, get_user_profile, KYCSubmissionView, KYCSubmissionView_agent, \
+    verify_payment
 from django.urls import path
 
 
@@ -24,6 +25,7 @@ path("login_member/", views.login_member, name="login_member"),
     path('kyc/submit/', KYCSubmissionView.as_view(), name='kyc-submit'),
 
     #payment related endpoints
+    path('verify-payment/', verify_payment, name='verify_payment'),
 
 
 
