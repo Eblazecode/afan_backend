@@ -342,8 +342,7 @@ class KYCSubmissionView(APIView):
 
 # verify payment
 # views.py
-@api_view(['POST'])
-@permission_classes([AllowAny])
+
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import api_view
