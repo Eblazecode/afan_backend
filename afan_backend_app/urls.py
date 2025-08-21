@@ -20,12 +20,13 @@ urlpatterns = [
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('user/', get_user_profile, name='get_user_profile'),
-path("login_member/", views.login_member, name="login_member"),
+    path("login_member/", views.login_member, name="login_member"),
     # farmers membership registration related endpoints
     path('kyc/submit/', KYCSubmissionView.as_view(), name='kyc-submit'),
 
     #payment related endpoints
-    path('verify-payment/', verify_payment, name='verify_payment'),
+    path("api/payments/verify/<str:reference>/", views.verify_payment, name="verify-payment"),
+
 
 
 
