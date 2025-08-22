@@ -361,11 +361,24 @@ from .models import Member
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
+import logging
+import requests
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from django.conf import settings
+from .models import Member
+
+logger = logging.getLogger(__name__)
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
 def verify_payment(request, reference):
     # Get membership_id from POST body
     membership_id = request.data.get("membership_id")
 
     if not membership_id:
+        logger.warning(f"Payment verification failed: missing membership_id for reference {reference}")
         return Response(
             {"status": "error", "message": "Missing membership ID"},
             status=400
@@ -377,11 +390,16 @@ def verify_payment(request, reference):
         url = f"https://api.paystack.co/transaction/verify/{reference}"
         response = requests.get(url, headers=headers).json()
 
+        # Log the full response for debugging
+        logger.info(f"Paystack verification response for {reference}: {response}")
+
         if response.get("status") and response["data"]["status"] == "success":
             try:
                 member = Member.objects.get(membership_id=membership_id)
                 member.paymentStatus = True
                 member.save()
+
+                logger.info(f"Payment verified successfully for member {membership_id}")
 
                 return Response({
                     "status": "success",
@@ -396,14 +414,20 @@ def verify_payment(request, reference):
                         }
                     }
                 })
+
             except Member.DoesNotExist:
+                logger.error(f"Member not found for membership_id {membership_id}")
                 return Response(
                     {"status": "error", "message": "Member not found"},
                     status=404
                 )
 
+        # If Paystack status not success
+        logger.warning(f"Payment not successful for reference {reference}: {response}")
         return Response({"status": "error", "message": "Payment not successful"}, status=400)
 
     except Exception as e:
+        logger.exception(f"Error verifying payment for reference {reference}: {str(e)}")
         return Response({"status": "error", "message": str(e)}, status=500)
+
 
