@@ -449,6 +449,7 @@ from django.contrib.auth.hashers import make_password
 
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def forgot_password(request):
     email = request.data.get('email')
     if not email:
@@ -473,6 +474,7 @@ def forgot_password(request):
 
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def reset_password(request, user_id, token):
     password = request.data.get('password')
     if not password:
