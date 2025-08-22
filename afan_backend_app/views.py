@@ -351,23 +351,30 @@ import requests
 from .models import Member
 
 
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from django.conf import settings
+import requests
+from .models import Member
+
 @api_view(["POST"])
 @permission_classes([AllowAny])
-def verify_payment(request):
-    data = request.data
-    transaction_id = data.get('reference')  # Paystack uses 'reference' for transaction ID)
-    membership_id = data.get('membership_id')
+def verify_payment(request, reference):
+    # Get membership_id from POST body
+    membership_id = request.data.get("membership_id")
 
-    if not transaction_id or not membership_id:
+    if not membership_id:
         return Response(
-            {"status": "error", "message": "Missing transaction ID or membership ID"},
-            status=status.HTTP_400_BAD_REQUEST
+            {"status": "error", "message": "Missing membership ID"},
+            status=400
         )
 
     try:
-        # Call Paystack to verify transaction
+        # Call Paystack API
         headers = {"Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}"}
-        url = f"https://api.paystack.co/transaction/verify/{transaction_id}"
+        url = f"https://api.paystack.co/transaction/verify/{reference}"
         response = requests.get(url, headers=headers).json()
 
         if response.get("status") and response["data"]["status"] == "success":
@@ -379,8 +386,8 @@ def verify_payment(request):
                 return Response({
                     "status": "success",
                     "data": {
-                        "transaction_id": transaction_id,
-                        "amount": response["data"]["amount"] / 100,  # Convert kobo → Naira
+                        "transaction_id": reference,
+                        "amount": response["data"]["amount"] / 100,
                         "date": response["data"]["paid_at"],
                         "member": {
                             "name": f"{member.first_name} {member.last_name}",
@@ -388,22 +395,15 @@ def verify_payment(request):
                             "membership_id": member.membership_id,
                         }
                     }
-                }, status=status.HTTP_200_OK)
-
+                })
             except Member.DoesNotExist:
                 return Response(
                     {"status": "error", "message": "Member not found"},
-                    status=status.HTTP_404_NOT_FOUND
+                    status=404
                 )
 
-        return Response(
-            {"status": "error", "message": "Payment not successful"},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response({"status": "error", "message": "Payment not successful"}, status=400)
 
     except Exception as e:
-        return Response(
-            {"status": "error", "message": str(e)},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+        return Response({"status": "error", "message": str(e)}, status=500)
 
