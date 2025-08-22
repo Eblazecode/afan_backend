@@ -207,8 +207,10 @@ def login_member(request):
             "membership_id": member.membership_id,
             "state": member.state,
             "lga": member.lga,
+            "role": "member",
             "kycStatus": member.kycStatus,
-            "transaction_id": getattr(member, 'transaction_id', None),
+            "transaction_id": member.transaction_id if hasattr(member, 'transaction_id') else None,
+
         },
         "refresh": str(refresh),
         "access": str(refresh.access_token),
