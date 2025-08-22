@@ -11,7 +11,7 @@ from django.shortcuts import render
 # Create your views here.
 from django.conf import settings
 
-
+import logging
 from rest_framework import viewsets, status, permissions
 from rest_framework.authtoken.admin import User
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -68,10 +68,7 @@ import re
 from django.core.exceptions import ValidationError
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Member  # your custom Member model
+
 
 
 def gen_membership_id_func(state, lga):
@@ -359,9 +356,6 @@ from django.conf import settings
 import requests
 from .models import Member
 
-@api_view(["POST"])
-@permission_classes([AllowAny])
-import logging
 import requests
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
