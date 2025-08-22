@@ -157,11 +157,10 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth.hashers import check_password
 from .models import Member   # import your Member model
 
-@api_view(['POST'])
-@permission_classes([AllowAny])
 
 
-import logging
+
+
 from django.contrib.auth.hashers import check_password
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
@@ -170,6 +169,7 @@ from .models import Member
 
 # Configure logging
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def login_member(request):
     email = request.data.get('email')
     password = request.data.get('password')
