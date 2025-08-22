@@ -369,7 +369,6 @@ from rest_framework.response import Response
 from django.conf import settings
 from .models import Member
 
-logger = logging.getLogger(__name__)
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
