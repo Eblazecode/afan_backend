@@ -186,10 +186,9 @@ REST_FRAMEWORK = {
 }
 
 
-#  payment and flutterwave APIs keys
-
-PAYSTACK_SECRET_KEY = os.environ.get('sk_test_96631a3a1c032626226924a0592a827d2654d92b')
-PAYSTACK_PUBLIC_KEY = os.environ.get('pk_live_ceb07ad4d1a3569dd6096616358e555847746cf3')
+#  payment and flutterwave APIs
+PAYSTACK_SECRET_KEY = os.environ.get('sk_test_38643c41932ac3fb1d252ede0c8dbd1db9417f1c')
+PAYSTACK_PUBLIC_KEY = os.environ.get('pk_test_60101ee2c35115b1f4dd7411958ecb312ceff9aa')
 
 FLUTTERWAVE_SECRET_KEY = 'FLWSECK_TEST-xxxxx'
 FLUTTERWAVE_PUBLIC_KEY = 'FLWPUBK_TEST-xxxxx'
