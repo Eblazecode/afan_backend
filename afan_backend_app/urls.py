@@ -26,7 +26,7 @@ urlpatterns = [
 
     #payment related endpoints
 path(
-    "payments/verify/<str:reference>/<str:membership_id>/",
+    "payments/verify/<str:reference>/",
     views.verify_payment,
     name="verify-payment"
 )
