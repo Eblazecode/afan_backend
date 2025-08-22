@@ -159,44 +159,60 @@ from .models import Member   # import your Member model
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+
+
+import logging
+from django.contrib.auth.hashers import check_password
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
+from rest_framework_simplejwt.tokens import RefreshToken
+from .models import Member
+
+# Configure logging
+@api_view(['POST'])
 def login_member(request):
     email = request.data.get('email')
     password = request.data.get('password')
 
+    # Log incoming data (avoid logging plain passwords in production)
+    logger.info(f"Login attempt for email: {email}")
+
     if email is None or password is None:
+        logger.warning("Email or password missing in request")
         return Response({'error': 'Email and password are required'}, status=400)
-
-
 
     try:
         member = Member.objects.get(email=email)
     except Member.DoesNotExist:
+        logger.warning(f"Member not found for email: {email}")
         return Response({'error': 'Invalid email or password'}, status=401)
-    print(member.password)  # hashed value
-    print(email)
-    print(password)  # plain password
-    print(check_password(password, member.password))  # T
 
-    if not check_password(password, member.password):
+    # Debugging: check password
+    is_valid_password = check_password(password, member.password)
+    logger.debug(f"Password check for {email}: {is_valid_password}")
+
+    if not is_valid_password:
+        logger.warning(f"Invalid password attempt for email: {email}")
         return Response({'error': 'Invalid email or password'}, status=401)
 
     refresh = RefreshToken.for_user(member)
+
+    logger.info(f"Login successful for {email}, membership_id: {member.membership_id}")
 
     return Response({
         "user": {
             "id": member.id,
             "name": f"{member.first_name} {member.last_name}".strip(),
             "email": member.email,
-            "membership_id": member.membership_id,   # ✅ now included
+            "membership_id": member.membership_id,
             "state": member.state,
             "lga": member.lga,
             "kycStatus": member.kycStatus,
-            "transaction_id": member.transaction_id if hasattr(member, 'transaction_id') else None,
+            "transaction_id": getattr(member, 'transaction_id', None),
         },
         "refresh": str(refresh),
         "access": str(refresh.access_token),
     }, status=200)
-
 
 
 from rest_framework.decorators import api_view, permission_classes
@@ -404,6 +420,7 @@ def verify_payment(request, reference):
                             "name": f"{member.first_name} {member.last_name}",
                             "email": member.email,
                             "membership_id": member.membership_id,
+                            "farmType": member.farmType,
                         }
                     }
                 })
