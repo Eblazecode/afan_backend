@@ -443,3 +443,49 @@ def verify_payment(request, reference):
         return Response({"status": "error", "message": str(e)}, status=500)
 
 
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
+from django.contrib.auth.hashers import make_password
+
+
+@api_view(['POST'])
+def forgot_password(request):
+    email = request.data.get('email')
+    if not email:
+        return Response({'error': 'Email is required'}, status=400)
+
+    try:
+        member = Member.objects.get(email=email)
+    except Member.DoesNotExist:
+        return Response({'error': 'No account with this email'}, status=404)
+
+    token = default_token_generator.make_token(member)
+    reset_link = f"https://www.afannigeria.com/reset-password/{member.id}/{token}/"
+
+    send_mail(
+        'Reset Your AFAN Password',
+        f'Click here to reset your password: {reset_link}',
+        'support@fan.ng',
+        [email],
+        fail_silently=False,
+    )
+    return Response({'message': 'Password reset link sent to your email'}, status=200)
+
+
+@api_view(['POST'])
+def reset_password(request, user_id, token):
+    password = request.data.get('password')
+    if not password:
+        return Response({'error': 'Password is required'}, status=400)
+
+    try:
+        member = Member.objects.get(id=user_id)
+    except Member.DoesNotExist:
+        return Response({'error': 'Invalid user'}, status=404)
+
+    if not default_token_generator.check_token(member, token):
+        return Response({'error': 'Invalid or expired token'}, status=400)
+
+    member.password = make_password(password)
+    member.save()
+    return Response({'message': 'Password reset successful'}, status=200)
