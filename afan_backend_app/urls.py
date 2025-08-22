@@ -23,6 +23,7 @@ urlpatterns = [
     path("login_member/", views.login_member, name="login_member"),
     # farmers membership registration related endpoints
     path('kyc/submit/', KYCSubmissionView.as_view(), name='kyc-submit'),
+    path('forgot_password/', views.forgot_password, name='forgot-password'),
 
     #payment related endpoints
 path(
