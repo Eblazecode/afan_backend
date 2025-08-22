@@ -355,7 +355,7 @@ from .models import Member
 @permission_classes([AllowAny])
 def verify_payment(request):
     data = request.data
-    transaction_id = data.get('transaction_id')
+    transaction_id = data.get('reference')  # Paystack uses 'reference' for transaction ID)
     membership_id = data.get('membership_id')
 
     if not transaction_id or not membership_id:
