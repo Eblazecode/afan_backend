@@ -25,11 +25,12 @@ urlpatterns = [
     path('kyc/submit/', KYCSubmissionView.as_view(), name='kyc-submit'),
 
     #payment related endpoints
-    path(
-        "payments/verify/<str:transaction_id>/",
-        views.verify_payment,
-        name="verify-payment"
-    ),
+path(
+    "payments/verify/<str:reference>/<str:membership_id>/",
+    views.verify_payment,
+    name="verify-payment"
+)
+
 
 
 
