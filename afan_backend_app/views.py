@@ -133,6 +133,7 @@ def register_member(request):
         lga=lga,
         password=password,
         membership_id= gen_membership_id,  # your custom function
+
     )
 
     refresh = RefreshToken.for_user(member)
@@ -209,6 +210,7 @@ def login_member(request):
             "lga": member.lga,
             "role": "member",
             "kycStatus": member.kycStatus,
+            "paymentStatus": member.paymentStatus,
             "transaction_id": member.transaction_id if hasattr(member, 'transaction_id') else None,
 
         },
@@ -345,6 +347,11 @@ class KYCSubmissionView(APIView):
                 membership_id=membership_id,
                 kycStatus="approved",  # default status
             )
+            # update member record where membership_id matches
+            member = Member.objects.get(membership_id=membership_id)
+            member.kycStatus = "approved"
+            member.save()
+
 
             return Response(
                 {"message": "Farmer record submission successful", "id": kyc.membership_id},
@@ -407,7 +414,7 @@ def verify_payment(request, reference):
         if response.get("status") and response["data"]["status"] == "success":
             try:
                 member = Member.objects.get(membership_id=membership_id)
-                member.paymentStatus = True
+                member.paymentStatus = "paid"
                 member.save()
 
                 logger.info(f"Payment verified successfully for member {membership_id}")
@@ -423,6 +430,7 @@ def verify_payment(request, reference):
                             "email": member.email,
                             "membership_id": member.membership_id,
                             "farmType": member.farmType,
+
                         }
                     }
                 })

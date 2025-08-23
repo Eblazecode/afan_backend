@@ -39,7 +39,7 @@ class Member(models.Model):
     password = models.CharField(max_length=128, default='password')  # store hashed password
     registration_date = models.DateTimeField(auto_now_add=True)
     kycStatus = models.CharField(default="not_submitted")  # KYC status
-    paymentStatus = models.BooleanField(default=False)  # Payment status
+    paymentStatus = models.CharField(default="not_paid")  # Payment status
 
 
     def save(self, *args, **kwargs):
