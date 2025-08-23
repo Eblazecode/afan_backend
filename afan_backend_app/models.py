@@ -93,6 +93,7 @@ class KYCSubmission(models.Model):
     submittedAt = models.DateTimeField(auto_now_add=True)
     membership_id = models.CharField(max_length=50, unique=True, blank=True, null=True)
     kycStatus = models.CharField(max_length=20, default='not_submitted')  # KYC status
+    paymentStatus = models.CharField(max_length=20, default='not_paid')  # Payment status
 
     def __str__(self):
         return f"{self.firstName} {self.lastName} - {self.phoneNumber}"
