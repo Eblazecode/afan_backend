@@ -145,6 +145,9 @@ def register_member(request):
             "membership_id": member.membership_id,
             "state": member.state,
             "lga": member.lga,
+            "kycStatus": member.kycStatus,
+            "paymentStatus": member.paymentStatus,
+
         },
         "refresh": str(refresh),
         "access": str(refresh.access_token),
