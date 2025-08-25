@@ -424,6 +424,7 @@ def verify_payment(request, reference):
                 try:
                     kyc = KYCSubmission.objects.get(membership_id=membership_id)
                     kyc.paymentStatus = "paid"
+                    kyc.transaction_id = reference
                     kyc.save()
                 except KYCSubmission.DoesNotExist:
                     logger.warning(f"No KYCSubmission found for membership_id {membership_id}")
