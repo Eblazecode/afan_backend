@@ -418,6 +418,7 @@ def verify_payment(request, reference):
             try:
                 member = Member.objects.get(membership_id=membership_id)
                 member.paymentStatus = "paid"
+                member.transaction_id = reference
                 member.save()
 
                 # update kycSubmission payment status if exists matching membership_id
