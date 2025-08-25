@@ -40,6 +40,7 @@ class Member(models.Model):
     registration_date = models.DateTimeField(auto_now_add=True)
     kycStatus = models.CharField(default="not_submitted")  # KYC status
     paymentStatus = models.CharField(default="not_paid")  # Payment status
+    transaction_id = models.CharField(max_length=100, blank=True, null=True)
 
 
     def save(self, *args, **kwargs):
