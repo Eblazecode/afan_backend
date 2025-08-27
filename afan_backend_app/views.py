@@ -172,41 +172,41 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Member
 
 # Configure logging
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth.hashers import check_password
-from .models import Member
-import logging
-
-logger = logging.getLogger(__name__)
-
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_member(request):
     email = request.data.get('email')
     password = request.data.get('password')
 
-    if not email or not password:
+    # Log incoming data (avoid logging plain passwords in production)
+    logger.info(f"Login attempt for email: {email}")
+
+    if email is None or password is None:
+        logger.warning("Email or password missing in request")
         return Response({'error': 'Email and password are required'}, status=400)
 
     try:
         member = Member.objects.get(email=email)
     except Member.DoesNotExist:
+        logger.warning(f"Member not found for email: {email}")
         return Response({'error': 'Invalid email or password'}, status=401)
 
-    if not check_password(password, member.password):
+    # Debugging: check password
+    is_valid_password = check_password(password, member.password)
+    logger.debug(f"Password check for {email}: {is_valid_password}")
+
+    if not is_valid_password:
+        logger.warning(f"Invalid password attempt for email: {email}")
         return Response({'error': 'Invalid email or password'}, status=401)
 
-    # Generate JWT tokens
     refresh = RefreshToken.for_user(member)
+
+    logger.info(f"Login successful for {email}, membership_id: {member.membership_id}")
 
     return Response({
         "user": {
             "id": member.id,
-            "first_name": member.first_name,
-            "last_name": member.last_name,
+            "name": f"{member.first_name} {member.last_name}".strip(),
             "email": member.email,
             "membership_id": member.membership_id,
             "state": member.state,
@@ -214,7 +214,8 @@ def login_member(request):
             "role": "member",
             "kycStatus": member.kycStatus,
             "paymentStatus": member.paymentStatus,
-            "transaction_id": getattr(member, 'transaction_id', None),
+            "transaction_id": member.transaction_id if hasattr(member, 'transaction_id') else None,
+
         },
         "refresh": str(refresh),
         "access": str(refresh.access_token),
