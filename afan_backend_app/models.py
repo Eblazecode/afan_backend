@@ -25,6 +25,21 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 
+
+class MemberManager(BaseUserManager):
+    def create_user(self, email, password=None, **extra_fields):
+        if not email:
+            raise ValueError("Email is required")
+        email = self.normalize_email(email)
+        user = self.model(email=email, **extra_fields)
+        user.set_password(password)  # properly hashes
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, email, password=None, **extra_fields):
+        extra_fields.setdefault("is_staff", True)
+        extra_fields.setdefault("is_superuser", True)
+        return self.create_user(email, password, **extra_fields)
 # Custom user model
 from django.db import models
 from django.contrib.auth.hashers import make_password
@@ -42,6 +57,17 @@ class Member(models.Model):
     paymentStatus = models.CharField(default="not_paid")  # Payment status
     transaction_id = models.CharField(max_length=100, blank=True, null=True)
 
+    # Required fields for AbstractBaseUser
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = []
+
+    objects = MemberManager()
+
+
+
 
     def save(self, *args, **kwargs):
         # Auto-generate membership ID if not set
@@ -53,7 +79,7 @@ class Member(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name or ''}"
+        return f"{self.first_name} {self.last_name or ''}  {self.email}"
 
 
 
