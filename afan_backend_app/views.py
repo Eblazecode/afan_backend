@@ -214,7 +214,7 @@ def login_member(request):
             "role": "member",
             "kycStatus": member.kycStatus,
             "paymentStatus": member.paymentStatus,
-            "transaction_id": member.transaction_id if hasattr(member, 'transaction_id') else None,
+            "transaction_id": member.transaction_id,
 
         },
         "refresh": str(refresh),
