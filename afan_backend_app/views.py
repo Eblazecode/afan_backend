@@ -216,6 +216,7 @@ def login_member(request):
             "paymentStatus": member.paymentStatus,
             "transaction_id": member.transaction_id,
 
+
         },
         "refresh": str(refresh),
         "access": str(refresh.access_token),
@@ -442,7 +443,7 @@ def verify_payment(request, reference):
                             "name": f"{member.first_name} {member.last_name}",
                             "email": member.email,
                             "membership_id": member.membership_id,
-                            "farmType": member.farmType,
+                            "farmType": kyc.farmType,
 
                         }
                     }
