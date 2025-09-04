@@ -39,6 +39,7 @@ class MemberManager(BaseUserManager):
     def create_superuser(self, email, password=None, **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
+        extra_fields.setdefault("is_agent", True)
         return self.create_user(email, password, **extra_fields)
 # Custom user model
 from django.db import models
@@ -66,8 +67,27 @@ class Member(models.Model):
 
     objects = MemberManager()
 
+    class Member(models.Model):
+        email = models.EmailField(unique=True, default="email")
+        first_name = models.CharField(max_length=100, default="first_name")
+        last_name = models.CharField(max_length=100, blank=True, default="last_name")
+        state = models.CharField(max_length=100, default="state")
+        lga = models.CharField(max_length=100, default="lga")
+        membership_id = models.CharField(max_length=50, unique=True, blank=True, null=False)
+        password = models.CharField(max_length=128, default='password')  # store hashed password
+        registration_date = models.DateTimeField(auto_now_add=True)
+        kycStatus = models.CharField(default="not_submitted")  # KYC status
+        paymentStatus = models.CharField(default="not_paid")  # Payment status
+        transaction_id = models.CharField(max_length=100, blank=True, null=True)
 
+        # Required fields for AbstractBaseUser
+        is_active = models.BooleanField(default=True)
+        is_staff = models.BooleanField(default=False)
 
+        USERNAME_FIELD = "email"
+        REQUIRED_FIELDS = []
+
+        objects = MemberManager()
 
     def save(self, *args, **kwargs):
         # Auto-generate membership ID if not set
@@ -81,6 +101,62 @@ class Member(models.Model):
     def __str__(self):
         return f"{self.first_name} {self.last_name or ''}  {self.email}"
 
+
+class AgentMember(models.Model):
+    email = models.EmailField(unique=True , default="email")
+    first_name = models.CharField(max_length=100, default="first_name")
+    last_name = models.CharField(max_length=100, blank=True, default="last_name")
+    state = models.CharField(max_length=100, default="state")
+    lga = models.CharField(max_length=100, default="lga")
+    sgent_id = models.CharField(max_length=50, unique=True, blank=True, null=False)
+    password = models.CharField(max_length=128, default='password')  # store hashed password
+    registration_date = models.DateTimeField(auto_now_add=True)
+    kycStatus = models.CharField(default="not_submitted")  # KYC status
+    paymentStatus = models.CharField(default="not_paid")  # Payment status
+    transaction_id = models.CharField(max_length=100, blank=True, null=True)
+
+    # Required fields for AbstractBaseUser
+    is_active = models.BooleanField(default=True)
+    is_staff = models.BooleanField(default=False)
+
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = []
+
+    objects = MemberManager()
+
+    class AgentMember(models.Model):
+        email = models.EmailField(unique=True, default="email")
+        first_name = models.CharField(max_length=100, default="first_name")
+        last_name = models.CharField(max_length=100, blank=True, default="last_name")
+        state = models.CharField(max_length=100, default="state")
+        lga = models.CharField(max_length=100, default="lga")
+        agent_id = models.CharField(max_length=50, unique=True, blank=True, null=False)
+        password = models.CharField(max_length=128, default='password')  # store hashed password
+        registration_date = models.DateTimeField(auto_now_add=True)
+        kycStatus = models.CharField(default="not_submitted")  # KYC status
+        paymentStatus = models.CharField(default="not_paid")  # Payment status
+        transaction_id = models.CharField(max_length=100, blank=True, null=True)
+
+        # Required fields for AbstractBaseUser
+        is_active = models.BooleanField(default=True)
+        is_staff = models.BooleanField(default=False)
+
+        USERNAME_FIELD = "email"
+        REQUIRED_FIELDS = []
+
+        objects = MemberManager()
+
+    def save(self, *args, **kwargs):
+        # Auto-generate membership ID if not set
+        if not self.agent_id:
+            self.membership_id = f"AFANAGT-{uuid.uuid4().hex[:8].upper()}"
+
+        if not self.id and self.password:  # hash password on creation
+            self.password = make_password(self.password)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.first_name} {self.last_name or ''}  {self.email}"
 
 
 

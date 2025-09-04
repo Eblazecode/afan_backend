@@ -4,7 +4,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from . import views
 from .views import MemberViewSet, register_member, get_user_profile, KYCSubmissionView, KYCSubmissionView_agent, \
-    verify_payment
+    verify_payment, register_agent
 from django.urls import path
 
 
@@ -30,8 +30,11 @@ path(
     "payments/verify/<str:reference>/",
     views.verify_payment,
     name="verify-payment"
-)
-
+),
+# agents related endpoints
+    path('agent/register/', register_agent, name='register_agent'),
+    path('agent/login/', views.login_agent, name='login_agent'),
+path('kyc/agent/', KYCSubmissionView_agent.as_view(), name='kyc-agent'),
 
 
 

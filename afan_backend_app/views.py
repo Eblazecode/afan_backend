@@ -18,7 +18,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Member
+from .models import Member, AgentMember
 from .serializers import MemberSerializer
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -153,6 +153,124 @@ def register_member(request):
         "access": str(refresh.access_token),
     }, status=201)
 
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def register_agent(request):
+    data = request.data
+    name = data.get('name')
+    email = data.get('email')
+    password = data.get('password')
+    state = data.get('state')
+    lga = data.get('lga')
+
+
+    print("Received data:", data)  # Debugging line to check received data
+    if not all([name, email, password, state, lga]):
+        return Response({'error': 'Missing fields'}, status=400)
+
+    # if  email exists
+    if Member.objects.filter(email=email).exists():
+        return Response({'error': 'user already already exists'}, status=400)
+
+    # split full name into first/last
+    parts = name.strip().split(" ", 1)
+    first_name = parts[0]
+    last_name = parts[1] if len(parts) > 1 else ""
+
+    import re
+    prefix = "AFAN/AGT"
+    cleaned_state = re.sub(r'\W+', '', str(state)).upper()[:3].ljust(3, 'X')
+    cleaned_lga = re.sub(r'\W+', '', str(lga)).upper()[:3].ljust(3, 'X')
+    count = Member.objects.filter(state=state, lga=lga).count() + 1
+    unique_code = str(count).zfill(5)
+
+    gen_membership_id = f"{prefix}/{cleaned_state}/{cleaned_lga}/{unique_code}"
+
+    # validate format
+    if not re.match(r"^AFAN/[A-Z]{3}/[A-Z]{3}/\d{5}$", gen_membership_id):
+        raise ValueError("Invalid membership ID format")
+
+    agentmember = AgentMember.objects.create(
+        email=email,
+        first_name=first_name,
+        last_name=last_name,
+        state=state,
+        lga=lga,
+        password=password,
+        agent_id= gen_membership_id,  # your custom function
+
+    )
+
+    refresh = RefreshToken.for_user(agentmember)
+    return Response({
+        "user": {
+            "id": agentmember.id,
+            "name": f"{agentmember.first_name} {agentmember.last_name}".strip(),
+            "email": agentmember.email,
+            "membership_id": agentmember.membership_id,
+            "state": agentmember.state,
+            "lga": agentmember.lga,
+            "kycStatus": agentmember.kycStatus,
+            "paymentStatus":agentmember.paymentStatus,
+
+        },
+        "refresh": str(refresh),
+        "access": str(refresh.access_token),
+    }, status=201)
+
+
+# Configure logging
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login_agent(request):
+    email = request.data.get('email')
+    password = request.data.get('password')
+
+    # Log incoming data (avoid logging plain passwords in production)
+    logger.info(f"Login attempt for email: {email}")
+
+    if email is None or password is None:
+        logger.warning("Email or password missing in request")
+        return Response({'error': 'Email and password are required'}, status=400)
+
+    try:
+        member = AgentMember.objects.get(email=email)
+    except AgentMember.DoesNotExist:
+        logger.warning(f"Member not found for email: {email}")
+        return Response({'error': 'Invalid email or password'}, status=401)
+
+    # Debugging: check password
+    is_valid_password = check_password(password, member.password)
+    logger.debug(f"Password check for {email}: {is_valid_password}")
+
+    if not is_valid_password:
+        logger.warning(f"Invalid password attempt for email: {email}")
+        return Response({'error': 'Invalid email or password'}, status=401)
+
+    refresh = RefreshToken.for_user(member)
+
+    logger.info(f"Login successful for {email}, membership_id: {member.agent_id}")
+
+    return Response({
+        "user": {
+            "id": member.id,
+            "name": f"{member.first_name} {member.last_name}".strip(),
+            "email": member.email,
+            "agent_id": member.membership_id,
+            "state": member.state,
+            "lga": member.lga,
+            "role": "member",
+            "kycStatus": member.kycStatus,
+            "paymentStatus": member.paymentStatus,
+            "transaction_id": member.transaction_id,
+
+
+        },
+        "refresh": str(refresh),
+        "access": str(refresh.access_token),
+    }, status=200)
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
