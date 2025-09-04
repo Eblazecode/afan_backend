@@ -209,7 +209,7 @@ def register_agent(request):
             "id": agentmember.id,
             "name": f"{agentmember.first_name} {agentmember.last_name}".strip(),
             "email": agentmember.email,
-            "membership_id": agentmember.membership_id,
+            "membership_id": agentmember.agent_id,
             "state": agentmember.state,
             "lga": agentmember.lga,
             "kycStatus": agentmember.kycStatus,
