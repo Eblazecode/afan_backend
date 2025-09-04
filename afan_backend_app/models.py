@@ -108,7 +108,7 @@ class AgentMember(models.Model):
     last_name = models.CharField(max_length=100, blank=True, default="last_name")
     state = models.CharField(max_length=100, default="state")
     lga = models.CharField(max_length=100, default="lga")
-    sgent_id = models.CharField(max_length=50, unique=True, blank=True, null=False)
+    agent_id = models.CharField(max_length=50, unique=True, blank=True, null=False)
     password = models.CharField(max_length=128, default='password')  # store hashed password
     registration_date = models.DateTimeField(auto_now_add=True)
     kycStatus = models.CharField(default="not_submitted")  # KYC status
