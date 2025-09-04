@@ -189,7 +189,7 @@ def register_agent(request):
     gen_membership_id = f"{prefix}/{cleaned_state}/{cleaned_lga}/{unique_code}"
 
     # validate format
-    if not re.match(r"^AFAN/[A-Z]{3}/[A-Z]{3}/\d{5}$", gen_membership_id):
+    if not re.match(r"^AFAN/AGT[A-Z]{3}/[A-Z]{3}/\d{5}$", gen_membership_id):
         raise ValueError("Invalid membership ID format")
 
     agentmember = AgentMember.objects.create(
