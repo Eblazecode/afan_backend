@@ -224,6 +224,15 @@ def register_agent(request):
 # Configure logging
 @api_view(['POST'])
 @permission_classes([AllowAny])
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from django.contrib.auth.hashers import check_password
+from rest_framework_simplejwt.tokens import RefreshToken
+from .models import AgentMember
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def login_agent(request):
     email = request.data.get('email')
     password = request.data.get('password')
@@ -232,7 +241,7 @@ def login_agent(request):
         return Response({'error': 'Email and password are required'}, status=400)
 
     try:
-        agent = AgentMember.objects.get(email=email)
+        agent = AgentMember.objects.get(email=email)  # query by email
     except AgentMember.DoesNotExist:
         return Response({'error': 'Invalid email or password'}, status=401)
 
@@ -246,7 +255,7 @@ def login_agent(request):
             "id": agent.id,
             "name": f"{agent.first_name} {agent.last_name}".strip(),
             "email": agent.email,
-            "agent_id": agent.agent_id,  # make sure this is correct
+            "agent_id": agent.agent_id,  # keep it for reference
             "state": agent.state,
             "lga": agent.lga,
             "role": "agent",
