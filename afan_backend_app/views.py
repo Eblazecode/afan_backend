@@ -225,7 +225,7 @@ def register_agent(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_agent(request):
-    email = request.data.get('agentID')
+    email = request.data.get('agentId')
     password = request.data.get('password')
 
     if not email or not password:
