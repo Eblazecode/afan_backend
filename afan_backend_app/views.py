@@ -225,48 +225,34 @@ def register_agent(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_agent(request):
-    email = request.data.get('email')
+    email = request.data.get('agentID')
     password = request.data.get('password')
 
-    # Log incoming data (avoid logging plain passwords in production)
-    logger.info(f"Login attempt for email: {email}")
-
-    if email is None or password is None:
-        logger.warning("Email or password missing in request")
+    if not email or not password:
         return Response({'error': 'Email and password are required'}, status=400)
 
     try:
-        member = AgentMember.objects.get(email=email)
+        agent = AgentMember.objects.get(email=email)
     except AgentMember.DoesNotExist:
-        logger.warning(f"Member not found for email: {email}")
         return Response({'error': 'Invalid email or password'}, status=401)
 
-    # Debugging: check password
-    is_valid_password = check_password(password, member.password)
-    logger.debug(f"Password check for {email}: {is_valid_password}")
-
-    if not is_valid_password:
-        logger.warning(f"Invalid password attempt for email: {email}")
+    if not check_password(password, agent.password):
         return Response({'error': 'Invalid email or password'}, status=401)
 
-    refresh = RefreshToken.for_user(member)
-
-    logger.info(f"Login successful for {email}, membership_id: {member.agent_id}")
+    refresh = RefreshToken.for_user(agent)
 
     return Response({
         "user": {
-            "id": member.id,
-            "name": f"{member.first_name} {member.last_name}".strip(),
-            "email": member.email,
-            "agent_id": member.membership_id,
-            "state": member.state,
-            "lga": member.lga,
-            "role": "member",
-            "kycStatus": member.kycStatus,
-            "paymentStatus": member.paymentStatus,
-            "transaction_id": member.transaction_id,
-
-
+            "id": agent.id,
+            "name": f"{agent.first_name} {agent.last_name}".strip(),
+            "email": agent.email,
+            "agent_id": agent.agent_id,  # make sure this is correct
+            "state": agent.state,
+            "lga": agent.lga,
+            "role": "agent",
+            "kycStatus": agent.kycStatus,
+            "paymentStatus": agent.paymentStatus,
+            "transaction_id": agent.transaction_id,
         },
         "refresh": str(refresh),
         "access": str(refresh.access_token),
