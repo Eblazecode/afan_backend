@@ -67,27 +67,7 @@ class Member(models.Model):
 
     objects = MemberManager()
 
-    class Member(models.Model):
-        email = models.EmailField(unique=True, default="email")
-        first_name = models.CharField(max_length=100, default="first_name")
-        last_name = models.CharField(max_length=100, blank=True, default="last_name")
-        state = models.CharField(max_length=100, default="state")
-        lga = models.CharField(max_length=100, default="lga")
-        membership_id = models.CharField(max_length=50, unique=True, blank=True, null=False)
-        password = models.CharField(max_length=128, default='password')  # store hashed password
-        registration_date = models.DateTimeField(auto_now_add=True)
-        kycStatus = models.CharField(default="not_submitted")  # KYC status
-        paymentStatus = models.CharField(default="not_paid")  # Payment status
-        transaction_id = models.CharField(max_length=100, blank=True, null=True)
 
-        # Required fields for AbstractBaseUser
-        is_active = models.BooleanField(default=True)
-        is_staff = models.BooleanField(default=False)
-
-        USERNAME_FIELD = "email"
-        REQUIRED_FIELDS = []
-
-        objects = MemberManager()
 
     def save(self, *args, **kwargs):
         # Auto-generate membership ID if not set
@@ -124,27 +104,6 @@ class AgentMember(models.Model):
 
     objects = MemberManager()
 
-    class AgentMember(models.Model):
-        email = models.EmailField(unique=True, default="email")
-        first_name = models.CharField(max_length=100, default="first_name")
-        last_name = models.CharField(max_length=100, blank=True, default="last_name")
-        state = models.CharField(max_length=100, default="state")
-        lga = models.CharField(max_length=100, default="lga")
-        agent_id = models.CharField(max_length=50, unique=True, blank=True, null=False)
-        password = models.CharField(max_length=128, default='password')  # store hashed password
-        registration_date = models.DateTimeField(auto_now_add=True)
-        kycStatus = models.CharField(default="not_submitted")  # KYC status
-        paymentStatus = models.CharField(default="not_paid")  # Payment status
-        transaction_id = models.CharField(max_length=100, blank=True, null=True)
-
-        # Required fields for AbstractBaseUser
-        is_active = models.BooleanField(default=True)
-        is_staff = models.BooleanField(default=False)
-
-        USERNAME_FIELD = "email"
-        REQUIRED_FIELDS = []
-
-        objects = MemberManager()
 
     def save(self, *args, **kwargs):
         # Auto-generate membership ID if not set
