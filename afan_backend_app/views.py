@@ -521,16 +521,25 @@ class KYCSubmissionView_agent(APIView):
 
             # Extra check for membership_id being readonly
             if not agent_id:
-                print("⚠️ Membership ID is missing from request!")
+                print("⚠️ AGENT ID is missing from request!")
             else:
-                print("✅ Membership ID included:", agent_id)
+                print("✅ AGENT ID included:", agent_id)
 
             # Create record
 
             gen_membership_id_func(state, lga)
+
+            # get agent details from AgentMember table
+            agent = AgentMember.objects.get(agent_id=agent_id)
+            agent_fname = agent.first_name
+            agent_lname = agent.last_name
+
+
             kyc = KYCSubmission.objects.create(
                 firstName=first_name,
                 lastName=last_name,
+                agent_fname=agent_fname,
+                agent_lname =agent_lname,
                 phoneNumber=phone_number,
                 nin=nin,
                 address=address,
