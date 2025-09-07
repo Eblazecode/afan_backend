@@ -59,8 +59,6 @@ class KYCSubmissionAgentSerializer(serializers.ModelSerializer):
             'farmLocation',
             'passportPhoto',
             'membership_id',
-            'agent_fname',
-            'agent_lname',
             'agent_id',
 
         ]
