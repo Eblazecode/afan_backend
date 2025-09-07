@@ -40,3 +40,27 @@ class KYCSubmissionSerializer(serializers.ModelSerializer):
             'passportPhoto',
             'membership_id',
         ]
+
+
+class KYCSubmissionAgentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = KYCSubmission
+        fields = [
+            'firstName',
+            'lastName',
+            'phoneNumber',
+            'address',
+            'state',
+            'lga',
+            'farmType',
+            'farmSize',
+            'yearsOfExperience',
+            'primaryCrops',
+            'farmLocation',
+            'passportPhoto',
+            'membership_id',
+            'agent_fname',
+            'agent_lname',
+            'agent_id',
+
+        ]

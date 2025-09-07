@@ -485,8 +485,16 @@ class KYCSubmissionView(APIView):
 # AGENT KYC SUBMISSION VIEW FOR FARMERS REGISTERED BY AGENTS
 
 
+from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework import status
+
+
+
 class KYCSubmissionView_agent(APIView):
-    permission_classes = [AllowAny]  # 👈 anyone can access
+    permission_classes = [AllowAny]
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request, *args, **kwargs):
@@ -494,12 +502,10 @@ class KYCSubmissionView_agent(APIView):
             data = request.data
             files = request.FILES
 
-            # Debugging received payloads
             print("====== DEBUG START ======")
-            print("Raw request data:", data)
-            print("Raw request files:", files)
-            print("AAGENT ID received:", data.get('agent_id'))
-            print("Passport photo received:", files.get('passportPhoto'))
+            print("📩 Raw request data:", data)
+            print("📸 Raw request files:", files)
+            print("👉 AGENT ID received:", data.get('agent_id'))
             print("====== DEBUG END ======")
 
             # Extract fields
@@ -517,29 +523,26 @@ class KYCSubmissionView_agent(APIView):
             primary_crops = data.get('primaryCrops')
             farm_location = data.get('farmLocation')
             passport_photo = files.get('passportPhoto')
-            membership_id = data.get('membership_id')
 
-            # Extra check for membership_id being readonly
             if not agent_id:
-                print("⚠️ AGENT ID is missing from request!")
-            else:
-                print("✅ AGENT ID included:", agent_id)
+                return Response({"error": "agent_id is required"}, status=400)
 
-            # Create record
+            # Lookup agent
+            try:
+                agent = AgentMember.objects.get(agent_id=agent_id)
+            except AgentMember.DoesNotExist:
+                return Response({"error": "Agent not found"}, status=404)
 
-            gen_membership_id_func(state, lga)
-
-            # get agent details from AgentMember table
-            agent = AgentMember.objects.get(agent_id=agent_id)
             agent_fname = agent.first_name
             agent_lname = agent.last_name
 
+            # Generate new membership_id
+            membership_id = gen_membership_id_func(state, lga)
 
+            # Create KYC record
             kyc = KYCSubmission.objects.create(
                 firstName=first_name,
                 lastName=last_name,
-                agent_fname=agent_fname,
-                agent_lname =agent_lname,
                 phoneNumber=phone_number,
                 nin=nin,
                 address=address,
@@ -553,13 +556,16 @@ class KYCSubmissionView_agent(APIView):
                 passportPhoto=passport_photo,
                 membership_id=membership_id,
                 agent_id=agent_id,
-                kycStatus="approved",  # default status
+                kycStatus="approved",
             )
-            # update member record where membership_id matches
-            member = Member.objects.get(membership_id=membership_id)
-            member.kycStatus = "approved"
-            member.save()
 
+            # Update Member record
+            try:
+                member = Member.objects.get(membership_id=membership_id)
+                member.kycStatus = "approved"
+                member.save()
+            except Member.DoesNotExist:
+                print("⚠️ Member not found for membership_id:", membership_id)
 
             return Response(
                 {"message": "Farmer record submission successful", "id": kyc.membership_id},
