@@ -583,7 +583,7 @@ class KYCSubmissionView_agent(APIView):
             print("❌ ERROR in KYCSubmissionView:", str(e))
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request,agent_id=None, *args, **kwargs):
         """
         ✅ Fetch all farmers registered by the logged-in agent
         """
@@ -591,7 +591,7 @@ class KYCSubmissionView_agent(APIView):
             # get the agent_id from logged in user (assuming profile has agent_id)
             agent_id = request.user.profile.agent_id
 
-            farmers = KYCSubmission.objects.filter(agent_id=agent_id).order_by("-created_at")
+            farmers = KYCSubmission.objects.filter(agent_id=agent_id).order_by("submittedAt")
 
             data = [
                 {
