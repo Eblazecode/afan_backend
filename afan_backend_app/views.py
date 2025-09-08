@@ -499,7 +499,7 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 class KYCSubmissionView_agent(APIView):
-    permission_classes = [IsAuthenticated]   # 🔒 Require login
+    permission_classes = [AllowAny]   # 🔒 Require login
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request, *args, **kwargs):
@@ -583,45 +583,7 @@ class KYCSubmissionView_agent(APIView):
             print("❌ ERROR in KYCSubmissionView:", str(e))
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-    def get(self, request, *args, **kwargs):
-        """
-        ✅ Fetch all farmers registered by the logged-in agent
-        """
-        try:
-            # 🔑 Pull agent_id from logged-in user profile
-            agent_id = getattr(request.user.profile, "agent_id", None)
 
-            if not agent_id:
-                return Response({"error": "Agent ID not linked to user"}, status=400)
-
-            farmers = KYCSubmission.objects.filter(agent_id=agent_id).order_by("-created_at")
-
-            if not farmers.exists():
-                return Response({"message": "No registrations found."}, status=404)
-
-            data = [
-                {
-                    "id": farmer.id,
-                    "name": f"{farmer.firstName} {farmer.lastName}",
-                    "email": getattr(farmer, "email", None),
-                    "membership_id": farmer.membership_id,
-                    "transaction_id": farmer.transaction_id,
-                    "phoneNumber": farmer.phoneNumber,
-                    "state": farmer.state,
-                    "lga": farmer.lga,
-                    "farmType": farmer.farmType,
-                    "status": farmer.kycStatus,
-                    "paymentStatus": getattr(farmer, "paymentStatus", "not_paid"),
-                    "registeredAt": farmer.created_at,
-                }
-                for farmer in farmers
-            ]
-
-            return Response(data, status=status.HTTP_200_OK)
-
-        except Exception as e:
-            print("❌ ERROR in GET KYCSubmissionView_agent:", str(e))
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 from rest_framework.response import Response
 from rest_framework import status
@@ -767,3 +729,25 @@ def reset_password(request, user_id, token):
     member.password = make_password(password)
     member.save()
     return Response({'message': 'Password reset successful'}, status=200)
+
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from .models import KYCSubmission
+from .serializers import KYCSubmissionSerializer
+
+# ✅ Return all farmers registered by a specific agent
+@api_view(["GET"])
+@permission_classes([AllowAny])  # Anyone can call this
+def get_farmers_by_agent(request, agent_id):
+    farmers = KYCSubmission.objects.filter(agent_id=agent_id).order_by("submittedAt")
+
+    serializer = KYCSubmissionSerializer(farmers, many=True)
+
+    return Response({
+        "data": serializer.data,
+        "count": farmers.count()
+    })
+
+
