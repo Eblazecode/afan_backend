@@ -499,7 +499,7 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 class KYCSubmissionView_agent(APIView):
-    permission_classes = [IsAuthenticated]   # 🔒 Require login
+    permission_classes = [AllowAny]   # 🔒 Require login
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request, *args, **kwargs):
