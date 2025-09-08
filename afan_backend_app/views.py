@@ -499,7 +499,7 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 class KYCSubmissionView_agent(APIView):
-    permission_classes = [AllowAny]   # ✅ Require login
+    permission_classes = [IsAuthenticated]   # 🔒 Require login
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request, *args, **kwargs):
@@ -517,7 +517,7 @@ class KYCSubmissionView_agent(APIView):
             first_name = data.get('firstName')
             last_name = data.get('lastName')
             phone_number = data.get('phoneNumber')
-            agent_id = data.get('agent_id')
+            agent_id = data.get('agent_id')   # ✅ still required for farmer form
             nin = data.get('nin')
             address = data.get('address')
             state = data.get('state')
@@ -532,7 +532,7 @@ class KYCSubmissionView_agent(APIView):
             if not agent_id:
                 return Response({"error": "agent_id is required"}, status=400)
 
-            # Lookup agent
+            # Validate agent exists
             try:
                 agent = AgentMember.objects.get(agent_id=agent_id)
             except AgentMember.DoesNotExist:
@@ -561,7 +561,7 @@ class KYCSubmissionView_agent(APIView):
                 kycStatus="approved",
             )
 
-            # Create Member record
+            # Create linked Member record
             Member.objects.create(
                 first_name=first_name,
                 last_name=last_name,
@@ -583,15 +583,21 @@ class KYCSubmissionView_agent(APIView):
             print("❌ ERROR in KYCSubmissionView:", str(e))
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-    def get(self, request,agent_id=None, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
         """
         ✅ Fetch all farmers registered by the logged-in agent
         """
         try:
-            # get the agent_id from logged in user (assuming profile has agent_id)
-            agent_id = request.user.profile.agent_id
+            # 🔑 Pull agent_id from logged-in user profile
+            agent_id = getattr(request.user.profile, "agent_id", None)
 
-            farmers = KYCSubmission.objects.filter(agent_id=agent_id).order_by("submittedAt")
+            if not agent_id:
+                return Response({"error": "Agent ID not linked to user"}, status=400)
+
+            farmers = KYCSubmission.objects.filter(agent_id=agent_id).order_by("-created_at")
+
+            if not farmers.exists():
+                return Response({"message": "No registrations found."}, status=404)
 
             data = [
                 {
@@ -614,6 +620,7 @@ class KYCSubmissionView_agent(APIView):
             return Response(data, status=status.HTTP_200_OK)
 
         except Exception as e:
+            print("❌ ERROR in GET KYCSubmissionView_agent:", str(e))
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 from rest_framework.response import Response
