@@ -737,17 +737,25 @@ from rest_framework.response import Response
 from .models import KYCSubmission
 from .serializers import KYCSubmissionSerializer
 
-# ✅ Return all farmers registered by a specific agent
 @api_view(["GET"])
 @permission_classes([AllowAny])  # Anyone can call this
 def get_farmers_by_agent(request, agent_id):
     farmers = KYCSubmission.objects.filter(agent_id=agent_id).order_by("submittedAt")
 
-    serializer = KYCSubmissionSerializer(farmers, many=True)
+    # Convert queryset into dicts that match frontend fields
+    farmer_list = [
+        {
+            "membership_id": f.membership_id,
+            "name": f.name,
+            "phoneNumber": f.phoneNumber,
+            "status": f.status,
+            "registeredAt": f.submittedAt,   # ✅ rename submittedAt -> registeredAt
+        }
+        for f in farmers
+    ]
 
     return Response({
-        "data": serializer.data,
-        "count": farmers.count()
+        "data": farmer_list,
+        "count": len(farmer_list)
     })
-
 
