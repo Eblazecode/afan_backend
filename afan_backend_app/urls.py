@@ -36,7 +36,8 @@ path(
     path('agent/register/', register_agent, name='register_agent'),
     path('agent/login/', views.login_agent, name='login_agent'),
 path('kyc/agent/', KYCSubmissionView_agent.as_view(), name='kyc-agent'),
- path("getfarmer/agent/<str:agent_id>/", get_farmers_by_agent, name="agent-farmers"),
+path("getfarmer/agent/<path:agent_id>/farmers/", get_farmers_by_agent, name="agent-farmers"),
+
 ]
 
 
