@@ -565,7 +565,6 @@ class KYCSubmissionView_agent(APIView):
             Member.objects.create(
                 first_name=first_name,
                 last_name=last_name,
-                phone_number=phone_number,
                 state=state,
                 lga=lga,
                 membership_id=membership_id,
