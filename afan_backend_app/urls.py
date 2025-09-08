@@ -35,7 +35,8 @@ path(
 # agents related endpoints
     path('agent/register/', register_agent, name='register_agent'),
     path('agent/login/', views.login_agent, name='login_agent'),
-path('kyc/agent/', KYCSubmissionView_agent.as_view(), name='kyc-agent'),
+path('kyc/agent/<str:agent_id>/', KYCSubmissionView_agent.as_view(), name='kyc-agent'),
+
 
 
 
