@@ -746,10 +746,11 @@ def get_farmers_by_agent(request, agent_id):
     farmer_list = [
         {
             "membership_id": f.membership_id,
-            "name": f.name,
+            "name": f.firstName + " " + f.lastName,
             "phoneNumber": f.phoneNumber,
-            "status": f.status,
+            "status": f.kycStatus,
             "registeredAt": f.submittedAt,   # ✅ rename submittedAt -> registeredAt
+            "paymentStatus": f.paymentStatus,
         }
         for f in farmers
     ]
