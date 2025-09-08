@@ -747,10 +747,19 @@ def get_farmers_by_agent(request, agent_id):
         {
             "membership_id": f.membership_id,
             "name": f.firstName + " " + f.lastName,
+            "email": f.membership.email if hasattr(f, 'membership') else "",
             "phoneNumber": f.phoneNumber,
             "status": f.kycStatus,
             "registeredAt": f.submittedAt,   # ✅ rename submittedAt -> registeredAt
             "paymentStatus": f.paymentStatus,
+            "farmType": f.farmType,
+            "farmSize": f.farmSize,
+            "yearsOfExperience": f.yearsOfExperience,
+            "primaryCrops": f.primaryCrops,
+            "farmLocation": f.farmLocation,
+            "state": f.state,
+            "lga": f.lga,
+
         }
         for f in farmers
     ]
