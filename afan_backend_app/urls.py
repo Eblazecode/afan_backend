@@ -4,7 +4,8 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from . import views
 from .views import MemberViewSet, register_member, get_user_profile, KYCSubmissionView, KYCSubmissionView_agent, \
-    verify_payment, register_agent, get_farmers_by_agent
+    verify_payment, register_agent, get_farmers_by_agent, \
+    agent_get_farmer_payment
 from django.urls import path
 
 
@@ -37,6 +38,8 @@ path(
     path('agent/login/', views.login_agent, name='login_agent'),
 path('kyc/agent/', KYCSubmissionView_agent.as_view(), name='kyc-agent'),
 path("getfarmer/agent/<path:agent_id>/farmers/", get_farmers_by_agent, name="agent-farmers"),
+path('agent/verify-payment/<str:reference>/', views.verify_agent_payment, name='verify_agent_payment'),
+
 
 ]
 

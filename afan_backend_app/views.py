@@ -680,6 +680,89 @@ def verify_payment(request, reference):
         return Response({"status": "error", "message": str(e)}, status=500)
 
 
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from django.conf import settings
+import requests
+import logging
+from .models import Member, KYCSubmission
+
+logger = logging.getLogger(__name__)
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def verify_agent_payment(request, reference):
+    """
+    Verify a Paystack payment using the reference from the payment page.
+    Retrieves membership_id from Paystack metadata.
+    """
+    try:
+        # Call Paystack verify endpoint
+        headers = {"Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}"}
+        url = f"https://api.paystack.co/transaction/verify/{reference}"
+        response = requests.get(url, headers=headers).json()
+        logger.info(f"Paystack verification response for {reference}: {response}")
+
+        if not response.get("status"):
+            return Response({"status": "error", "message": "Payment verification failed"}, status=400)
+
+        data = response["data"]
+
+        if data["status"] != "success":
+            return Response({"status": "error", "message": "Payment not successful"}, status=400)
+
+        # Get membership_id from metadata
+        metadata = data.get("metadata", {})
+        membership_id = metadata.get("membership_id")
+
+        if not membership_id:
+            logger.warning(f"Payment verified but missing membership_id in metadata: {reference}")
+            return Response({"status": "error", "message": "Membership ID missing in payment metadata"}, status=400)
+
+        # Update Member record
+        try:
+            member = Member.objects.get(membership_id=membership_id)
+            member.paymentStatus = "paid"
+            member.transaction_id = reference
+            member.save()
+
+            # Update KYCSubmission if exists
+            try:
+                kyc = KYCSubmission.objects.get(membership_id=membership_id)
+                kyc.paymentStatus = "paid"
+                kyc.transaction_id = reference
+                kyc.save()
+            except KYCSubmission.DoesNotExist:
+                logger.warning(f"No KYCSubmission found for membership_id {membership_id}")
+                kyc = None
+
+            return Response({
+                "status": "success",
+                "data": {
+                    "transaction_id": reference,
+                    "amount": data["amount"] / 100,
+                    "date": data["paid_at"],
+                    "member": {
+                        "name": f"{member.first_name} {member.last_name}",
+                        "email": member.email,
+                        "membership_id": member.membership_id,
+                        "farmType": getattr(kyc, "farmType", "N/A"),
+                    }
+                }
+            })
+
+        except Member.DoesNotExist:
+            logger.error(f"Member not found for membership_id {membership_id}")
+            return Response({"status": "error", "message": "Member not found"}, status=404)
+
+    except Exception as e:
+        logger.exception(f"Error verifying payment for reference {reference}: {str(e)}")
+        return Response({"status": "error", "message": str(e)}, status=500)
+
+
+
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.contrib.auth.hashers import make_password
@@ -768,3 +851,18 @@ def get_farmers_by_agent(request, agent_id):
         "count": len(farmer_list)
     })
 
+# AGENT PAY FOR FARMER
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def agent_get_farmer_payment(request, membership_id):
+    try:
+        kyc = KYCSubmission.objects.get(membership_id=membership_id)
+        return Response({
+            "name": kyc.firstName + " " + kyc.lastName,
+            "membership_id": kyc.membership_id,
+            "phoneNumber": kyc.phoneNumber,
+            "farmType": kyc.farmType,
+            "paymentStatus": kyc.paymentStatus,
+        })
+    except KYCSubmission.DoesNotExist:
+        return Response({"error": "Farmer not found"}, status=404)
