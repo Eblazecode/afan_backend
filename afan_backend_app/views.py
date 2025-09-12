@@ -875,7 +875,7 @@ def initiate_agent_payment(request):
     payload = {
         "email": email,
         "amount": amount,
-        "callback_url": "https://www.afannigeria.com/agent-payment-callback",
+        "callback_url": "https://www.afannigeria.com/agent-paymentcallback",
         "metadata": {
             "membership_id": membership_id
         }
