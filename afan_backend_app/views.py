@@ -878,15 +878,15 @@ from django.conf import settings
 @permission_classes([AllowAny])
 def initiate_agent_payment(request):
     membership_id = request.data.get("membership_id")
-    phonenumber = request.data.get("phonenumber")
+    email = request.data.get("email")
     amount = request.data.get("amount")  # pass in kobo, e.g. 5000 NGN = 500000
 
-    if not membership_id or not phonenumber or not amount:
+    if not membership_id or not email or not amount:
         return Response({"status": "error", "message": "Missing fields"}, status=400)
 
     headers = {"Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}"}
     payload = {
-        "phonenumber": phonenumber,
+        "email": email,
         "amount": amount,
         "callback_url": "https://www.afannigeria.com/agent-payment-callback",
         "metadata": {
