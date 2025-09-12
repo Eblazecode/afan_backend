@@ -875,6 +875,7 @@ from rest_framework.decorators import api_view
 from django.conf import settings
 
 @api_view(["POST"])
+@permission_classes([AllowAny])
 def initiate_agent_payment(request):
     membership_id = request.data.get("membership_id")
     phonenumber = request.data.get("phonenumber")
