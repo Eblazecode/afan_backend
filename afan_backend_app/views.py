@@ -881,6 +881,8 @@ def initiate_agent_payment(request):
     email = request.data.get("email")
     amount = request.data.get("amount")  # pass in kobo, e.g. 5000 NGN = 500000
 
+    print("Request data:", request.data)
+
     if not membership_id or not email or not amount:
         return Response({"status": "error", "message": "Missing fields"}, status=400)
 
