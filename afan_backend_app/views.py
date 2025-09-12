@@ -867,3 +867,41 @@ def agent_get_farmer_payment(request, membership_id):
         })
     except KYCSubmission.DoesNotExist:
         return Response({"error": "Farmer not found"}, status=404)
+
+
+import requests
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
+from django.conf import settings
+
+@api_view(["POST"])
+def initiate_agent_payment(request):
+    membership_id = request.data.get("membership_id")
+    email = request.data.get("email")
+    amount = request.data.get("amount")  # pass in kobo, e.g. 5000 NGN = 500000
+
+    if not membership_id or not email or not amount:
+        return Response({"status": "error", "message": "Missing fields"}, status=400)
+
+    headers = {"Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}"}
+    payload = {
+        "email": email,
+        "amount": amount,
+        "callback_url": "https://www.afannigeria.com/agent-payment-callback",
+        "metadata": {
+            "membership_id": membership_id
+        }
+    }
+
+    url = "https://api.paystack.co/transaction/initialize"
+    r = requests.post(url, headers=headers, json=payload)
+    res = r.json()
+
+    if res.get("status"):
+        return Response({
+            "status": "success",
+            "authorization_url": res["data"]["authorization_url"],
+            "reference": res["data"]["reference"]
+        })
+    else:
+        return Response({"status": "error", "message": res.get("message")}, status=400)

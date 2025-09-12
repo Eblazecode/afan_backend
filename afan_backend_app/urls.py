@@ -39,6 +39,7 @@ path(
 path('kyc/agent/', KYCSubmissionView_agent.as_view(), name='kyc-agent'),
 path("getfarmer/agent/<path:agent_id>/farmers/", get_farmers_by_agent, name="agent-farmers"),
 path('agent/verify-payment/<str:reference>/', views.verify_agent_payment, name='verify_agent_payment'),
+    path('agent/initiate-payment/', views.initiate_agent_payment, name='initiate_agent_payment'),
 
 
 ]
