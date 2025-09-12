@@ -694,68 +694,69 @@ logger = logging.getLogger(__name__)
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def verify_agent_payment(request, reference):
-    """
-    Verify a Paystack payment using the reference from the payment page.
-    Retrieves membership_id from Paystack metadata.
-    """
+    # Get membership_id from POST body
+    membership_id = request.data.get("membership_id")
+
+    if not membership_id:
+        logger.warning(f"Payment verification failed: missing membership_id for reference {reference}")
+        return Response(
+            {"status": "error", "message": "Missing membership ID"},
+            status=400
+        )
+
     try:
-        # Call Paystack verify endpoint
+        # Call Paystack API
         headers = {"Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}"}
         url = f"https://api.paystack.co/transaction/verify/{reference}"
         response = requests.get(url, headers=headers).json()
+
+        # Log the full response for debugging
         logger.info(f"Paystack verification response for {reference}: {response}")
 
-        if not response.get("status"):
-            return Response({"status": "error", "message": "Payment verification failed"}, status=400)
-
-        data = response["data"]
-
-        if data["status"] != "success":
-            return Response({"status": "error", "message": "Payment not successful"}, status=400)
-
-        # Get membership_id from metadata
-        metadata = data.get("metadata", {})
-        membership_id = metadata.get("membership_id")
-
-        if not membership_id:
-            logger.warning(f"Payment verified but missing membership_id in metadata: {reference}")
-            return Response({"status": "error", "message": "Membership ID missing in payment metadata"}, status=400)
-
-        # Update Member record
-        try:
-            member = Member.objects.get(membership_id=membership_id)
-            member.paymentStatus = "paid"
-            member.transaction_id = reference
-            member.save()
-
-            # Update KYCSubmission if exists
+        if response.get("status") and response["data"]["status"] == "success":
             try:
-                kyc = KYCSubmission.objects.get(membership_id=membership_id)
-                kyc.paymentStatus = "paid"
-                kyc.transaction_id = reference
-                kyc.save()
-            except KYCSubmission.DoesNotExist:
-                logger.warning(f"No KYCSubmission found for membership_id {membership_id}")
-                kyc = None
+                member = Member.objects.get(membership_id=membership_id)
+                member.paymentStatus = "paid"
+                member.transaction_id = reference
+                member.save()
 
-            return Response({
-                "status": "success",
-                "data": {
-                    "transaction_id": reference,
-                    "amount": data["amount"] / 100,
-                    "date": data["paid_at"],
-                    "member": {
-                        "name": f"{member.first_name} {member.last_name}",
-                        "email": member.email,
-                        "membership_id": member.membership_id,
-                        "farmType": getattr(kyc, "farmType", "N/A"),
+                # update kycSubmission payment status if exists matching membership_id
+                try:
+                    kyc = KYCSubmission.objects.get(membership_id=membership_id)
+                    kyc.paymentStatus = "paid"
+                    kyc.transaction_id = reference
+                    kyc.save()
+                except KYCSubmission.DoesNotExist:
+                    logger.warning(f"No KYCSubmission found for membership_id {membership_id}")
+
+                logger.info(f"Payment verified successfully for member {membership_id}")
+
+                return Response({
+                    "status": "success",
+                    "data": {
+                        "transaction_id": reference,
+                        "amount": response["data"]["amount"] / 100,
+                        "date": response["data"]["paid_at"],
+                        "member": {
+                            "name": f"{member.first_name} {member.last_name}",
+                            "email": member.email,
+                            "membership_id": member.membership_id,
+                            "farmType": kyc.farmType,
+
+                        }
                     }
-                }
-            })
+                })
 
-        except Member.DoesNotExist:
-            logger.error(f"Member not found for membership_id {membership_id}")
-            return Response({"status": "error", "message": "Member not found"}, status=404)
+            except Member.DoesNotExist:
+                logger.error(f"Member not found for membership_id {membership_id}")
+                return Response(
+                    {"status": "error", "message": "Member not found"},
+                    status=404
+                )
+
+        # If Paystack status not success
+        logger.warning(f"Payment not successful for reference {reference}: {response}")
+        return Response({"status": "error", "message": "Payment not successful"}, status=400)
 
     except Exception as e:
         logger.exception(f"Error verifying payment for reference {reference}: {str(e)}")
