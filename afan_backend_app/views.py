@@ -570,7 +570,7 @@ class KYCSubmissionView_agent(APIView):
                 membership_id=membership_id,
                 kycStatus="approved",
                 paymentStatus="not_paid",
-                password=make_password("farmer123"),
+                password="farmer123",
             )
 
             return Response(
