@@ -560,14 +560,14 @@ class KYCSubmissionView_agent(APIView):
                 membership_id=membership_id,
                 agent_id=agent_id,
                 kycStatus="approved",
-                email=email,  # ✅ add email field here too
+
             )
 
             # Create linked Member record
             Member.objects.create(
                 first_name=first_name,
                 last_name=last_name,
-                email=email,  # ✅ prevent duplicate constraint violation
+                email=f"{membership_id.lower()}@afannigeria.com",  # ✅ prevent duplicate constraint violation
                 state=state,
                 lga=lga,
                 membership_id=membership_id,
