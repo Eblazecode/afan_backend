@@ -499,7 +499,7 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 class KYCSubmissionView_agent(APIView):
-    permission_classes = [AllowAny]   # 🔒 Require login
+    permission_classes = [AllowAny]
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request, *args, **kwargs):
@@ -517,7 +517,7 @@ class KYCSubmissionView_agent(APIView):
             first_name = data.get('firstName')
             last_name = data.get('lastName')
             phone_number = data.get('phoneNumber')
-            agent_id = data.get('agent_id')   # ✅ still required for farmer form
+            agent_id = data.get('agent_id')
             nin = data.get('nin')
             address = data.get('address')
             state = data.get('state')
@@ -528,6 +528,7 @@ class KYCSubmissionView_agent(APIView):
             primary_crops = data.get('primaryCrops')
             farm_location = data.get('farmLocation')
             passport_photo = files.get('passportPhoto')
+            email = data.get('email')   # ✅ ensure frontend sends this
 
             if not agent_id:
                 return Response({"error": "agent_id is required"}, status=400)
@@ -559,12 +560,14 @@ class KYCSubmissionView_agent(APIView):
                 membership_id=membership_id,
                 agent_id=agent_id,
                 kycStatus="approved",
+                email=email,  # ✅ add email field here too
             )
 
             # Create linked Member record
             Member.objects.create(
                 first_name=first_name,
                 last_name=last_name,
+                email=email,  # ✅ prevent duplicate constraint violation
                 state=state,
                 lga=lga,
                 membership_id=membership_id,
@@ -581,7 +584,6 @@ class KYCSubmissionView_agent(APIView):
         except Exception as e:
             print("❌ ERROR in KYCSubmissionView:", str(e))
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
 
 
 from rest_framework.response import Response
