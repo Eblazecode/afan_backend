@@ -528,7 +528,7 @@ class KYCSubmissionView_agent(APIView):
             primary_crops = data.get('primaryCrops')
             farm_location = data.get('farmLocation')
             passport_photo = files.get('passportPhoto')
-            email = data.get('email')   # ✅ ensure frontend sends this
+
 
             if not agent_id:
                 return Response({"error": "agent_id is required"}, status=400)
