@@ -693,14 +693,14 @@ from .models import Member, KYCSubmission
 logger = logging.getLogger(__name__)
 
 
-@api_view(["POST"])
-@permission_classes([AllowAny])
+
 from rest_framework.response import Response
 import requests
 from django.conf import settings
 from .models import Member, KYCSubmission
 
-
+@api_view(["POST"])
+@permission_classes([AllowAny])
 def verify_agent_payment(request, reference):
     try:
         # 🔑 Call Paystack API to verify
