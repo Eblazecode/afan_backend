@@ -854,7 +854,7 @@ from .models import KYCSubmission, Member  # adjust import if needed
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
-def agent_get_farmer_payment_receipt(request, membership_id):
+def agent_get_payment_receipt(request, membership_id):
     try:
         # ✅ Get KYCSubmission
         kyc = KYCSubmission.objects.get(membership_id=membership_id)
