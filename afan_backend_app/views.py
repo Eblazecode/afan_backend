@@ -846,20 +846,45 @@ def get_farmers_by_agent(request, agent_id):
     })
 
 # AGENT PAY FOR FARMER
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from .models import KYCSubmission, Member  # adjust import if needed
+
+
 @api_view(["GET"])
 @permission_classes([AllowAny])
-def agent_get_farmer_payment(request, membership_id):
+def agent_get_farmer_payment_receipt(request, membership_id):
     try:
+        # ✅ Get KYCSubmission
         kyc = KYCSubmission.objects.get(membership_id=membership_id)
+
+        # ✅ Try to get Member too (in case more details exist there)
+        try:
+            member = Member.objects.get(membership_id=membership_id)
+        except Member.DoesNotExist:
+            member = None
+
+        # ✅ Build response
         return Response({
-            "name": kyc.firstName + " " + kyc.lastName,
-            "membership_id": kyc.membership_id,
-            "phoneNumber": kyc.phoneNumber,
-            "farmType": kyc.farmType,
-            "paymentStatus": kyc.paymentStatus,
+            "status": "success",
+            "data": {
+                "transaction_id": getattr(kyc, "transaction_id", None),
+                "amount": getattr(kyc, "amount", None),  # if stored during payment verification
+                "date": getattr(kyc, "payment_date", None),  # if you saved it
+                "paymentStatus": kyc.paymentStatus,
+                "member": {
+                    "name": f"{kyc.firstName} {kyc.lastName}",
+                    "membership_id": kyc.membership_id,
+                    "phoneNumber": kyc.phoneNumber,
+                    "farmType": kyc.farmType,
+                    "email": getattr(member, "email", None),  # optional
+                }
+            }
         })
+
     except KYCSubmission.DoesNotExist:
-        return Response({"error": "Farmer not found"}, status=404)
+        return Response({"status": "error", "message": "Farmer not found"}, status=404)
 
 
 import requests
