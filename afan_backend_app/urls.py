@@ -39,7 +39,7 @@ path(
      path("getfarmer/agent/<path:agent_id>/farmers/", get_farmers_by_agent, name="agent-farmers"),
     path('agent/verify-payment/<path:reference>/', views.verify_agent_payment, name='verify_agent_payment'),
     path('agent/initiate-payment/', views.initiate_agent_payment, name='initiate_agent_payment'),
-    path('agent/farmer-reciept/<path:membership_id>/',agent_get_payment_receipt, name='agent_get_farmer_payment'),
+    path('agent/farmer-reciept/<str:membership_id>/',agent_get_payment_receipt, name='agent_get_farmer_payment'),
 
 
 ]
