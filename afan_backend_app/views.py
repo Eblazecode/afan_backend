@@ -695,36 +695,44 @@ logger = logging.getLogger(__name__)
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
+from rest_framework.response import Response
+import requests
+from django.conf import settings
+from .models import Member, KYCSubmission
+
+
 def verify_agent_payment(request, reference):
     try:
-        # Call Paystack API to verify
+        # 🔑 Call Paystack API to verify
         headers = {"Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}"}
         url = f"https://api.paystack.co/transaction/verify/{reference}"
         response = requests.get(url, headers=headers).json()
 
         if response.get("status") and response["data"]["status"] == "success":
-            # ✅ Pull membership_id from metadata instead of frontend
+            # ✅ Pull membership_id from metadata
             metadata = response["data"].get("metadata", {})
             membership_id = metadata.get("membership_id")
 
             if not membership_id:
                 return Response({"status": "error", "message": "Missing membership_id in metadata"}, status=400)
 
-            # Update member record
+            # 🔎 Update Member record
             try:
                 member = Member.objects.get(membership_id=membership_id)
                 member.paymentStatus = "paid"
                 member.transaction_id = reference
                 member.save()
 
-                # Also update KYCSubmission if available
+                # 🔎 Update KYCSubmission if exists
                 try:
                     kyc = KYCSubmission.objects.get(membership_id=membership_id)
-                    kyc.paymentStatus = "paid"
-                    kyc.transaction_id = reference
+                    if hasattr(kyc, "paymentStatus"):
+                        kyc.paymentStatus = "paid"
+                    if hasattr(kyc, "transaction_id"):
+                        kyc.transaction_id = reference
                     kyc.save()
                 except KYCSubmission.DoesNotExist:
-                    pass
+                    kyc = None  # no kyc for this member
 
                 return Response({
                     "status": "success",
@@ -734,9 +742,8 @@ def verify_agent_payment(request, reference):
                         "date": response["data"]["paid_at"],
                         "member": {
                             "name": f"{member.first_name} {member.last_name}",
-                            "email": member.email,
                             "membership_id": member.membership_id,
-                            "farmType": getattr(kyc, "farmType", None),
+                            "farmType": getattr(kyc, "farmType", None) if kyc else None,
                         }
                     }
                 })
