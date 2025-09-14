@@ -852,6 +852,11 @@ from rest_framework.response import Response
 from .models import KYCSubmission, Member  # adjust import if needed
 
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from django.utils.timezone import localtime
+
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def agent_get_payment_receipt(request, membership_id):
@@ -859,32 +864,42 @@ def agent_get_payment_receipt(request, membership_id):
         # ✅ Get KYCSubmission
         kyc = KYCSubmission.objects.get(membership_id=membership_id)
 
-        # ✅ Try to get Member too (in case more details exist there)
+        # ✅ Try to get Member too (if you have such a model)
+        member = None
         try:
+            from .models import Member  # adjust import if needed
             member = Member.objects.get(membership_id=membership_id)
-        except Member.DoesNotExist:
-            member = None
+        except Exception:
+            pass  # not fatal if Member doesn’t exist
+
+        # ✅ Safely extract values
+        transaction_id = getattr(kyc, "transaction_id", f"TXN-{membership_id}")
+        amount = 5000
+        payment_date = getattr(kyc, "payment_date", None)
+        if payment_date:
+            payment_date = localtime(payment_date).strftime("%Y-%m-%d %H:%M:%S")
 
         # ✅ Build response
-        return Response({
-            "status": "success",
-            "data": {
-                "transaction_id": getattr(kyc, "transaction_id", None),
-                "amount": getattr(kyc, "amount", None),  # if stored during payment verification
-                "date": getattr(kyc, "payment_date", None),  # if you saved it
-                "paymentStatus": kyc.paymentStatus,
-                "member": {
-                    "name": f"{kyc.firstName} {kyc.lastName}",
-                    "membership_id": kyc.membership_id,
-                    "phoneNumber": kyc.phoneNumber,
-                    "farmType": kyc.farmType,
-                    "email": getattr(member, "email", None),  # optional
-                }
+        receipt_data = {
+            "transaction_id": transaction_id,
+            "amount": amount,
+            "date": payment_date,
+            "paymentStatus": getattr(kyc, "paymentStatus", "unpaid"),
+            "member": {
+                "name": f"{getattr(kyc, 'firstName', '')} {getattr(kyc, 'lastName', '')}".strip(),
+                "membership_id": getattr(kyc, "membership_id", ""),
+                "phoneNumber": getattr(kyc, "phoneNumber", ""),
+                "farmType": getattr(kyc, "farmType", ""),
+                "email": getattr(member, "email", None) if member else None,
             }
-        })
+        }
+
+        return Response({"status": "success", "data": receipt_data}, status=200)
 
     except KYCSubmission.DoesNotExist:
         return Response({"status": "error", "message": "Farmer not found"}, status=404)
+    except Exception as e:
+        return Response({"status": "error", "message": str(e)}, status=500)
 
 
 import requests
