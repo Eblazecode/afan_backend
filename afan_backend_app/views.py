@@ -529,7 +529,6 @@ class KYCSubmissionView_agent(APIView):
             farm_location = data.get('farmLocation')
             passport_photo = files.get('passportPhoto')
 
-
             if not agent_id:
                 return Response({"error": "agent_id is required"}, status=400)
 
@@ -542,7 +541,7 @@ class KYCSubmissionView_agent(APIView):
             # Generate membership_id
             membership_id = gen_membership_id_func(state, lga)
 
-            # Create KYC record
+            # ✅ Create KYC record (no email here)
             kyc = KYCSubmission.objects.create(
                 firstName=first_name,
                 lastName=last_name,
@@ -560,20 +559,20 @@ class KYCSubmissionView_agent(APIView):
                 membership_id=membership_id,
                 agent_id=agent_id,
                 kycStatus="approved",
-
             )
 
-            # Create linked Member record
+            # ✅ Create linked Member (email only required here)
+            email = f"{membership_id.lower()}@afannigeria.com"
             Member.objects.create(
                 first_name=first_name,
                 last_name=last_name,
-                email=f"{membership_id.lower()}@afannigeria.com",  # ✅ prevent duplicate constraint violation
                 state=state,
                 lga=lga,
                 membership_id=membership_id,
                 kycStatus="approved",
                 paymentStatus="not_paid",
                 password="farmer123",
+                email=email,
             )
 
             return Response(
