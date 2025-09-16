@@ -40,7 +40,7 @@ path(
     path('agent/verify-payment/<path:reference>/', views.verify_agent_payment, name='verify_agent_payment'),
     path('agent/initiate-payment/', views.initiate_agent_payment, name='initiate_agent_payment'),
     path('agent/farmer-reciept/<path:membership_id>/',agent_get_payment_receipt, name='agent_get_farmer_payment'),
-    path('agent-paymentcallback',agent_payment_callback,name='payment callback')
+    path('save-transaction/',agent_payment_callback,name='payment callback')
 
 ]
 
