@@ -941,3 +941,58 @@ def initiate_agent_payment(request):
         })
     else:
         return Response({"status": "error", "message": res.get("message")}, status=400)
+
+
+
+
+import requests
+from django.conf import settings
+from django.shortcuts import redirect
+from django.http import JsonResponse
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def agent_payment_callback(request):
+    reference = request.GET.get("reference")
+    membership_id = request.GET.get("membership_id")  # from your button
+
+    if not reference:
+        return JsonResponse({"error": "No reference returned"}, status=400)
+
+    headers = {"Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}"}
+    response = requests.get(
+        f"https://api.paystack.co/transaction/verify/{reference}",
+        headers=headers
+    )
+    res_data = response.json()
+
+    if res_data["status"] and res_data["data"]["status"] == "success":
+        amount = int(res_data["data"]["amount"]) / 100  # convert kobo to ₦
+        paid_at = res_data["data"]["paid_at"]
+
+        # update meber table
+        try:
+            member = Member.objects.get(membership_id=membership_id)
+            member.paymentStatus = "paid"
+            member.transaction_id = reference
+            member.save()
+        except Member.DoesNotExist:
+            pass
+
+        # update kycSubmission payment status if exists matching membership_id
+        try:
+            kyc = KYCSubmission.objects.get(membership_id=membership_id)
+            kyc.paymentStatus = "paid"
+            kyc.transaction_id = reference
+            kyc.save()
+        except KYCSubmission.DoesNotExist:
+            pass
+
+
+        return redirect("/payment/success/")  # success page
+    else:
+        # throw error
+        print(" ERROR OCCURED MEBER NOT FOUND")
+
+
+        return redirect("/payment/failed/")
