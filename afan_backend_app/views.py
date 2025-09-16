@@ -950,14 +950,22 @@ from django.conf import settings
 from django.shortcuts import redirect
 from django.http import JsonResponse
 
-@api_view(["GET"])
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from django.http import JsonResponse
+import requests
+from django.conf import settings
+import json
+
+@api_view(["POST"])
 @permission_classes([AllowAny])
 def agent_payment_callback(request):
-    reference = request.GET.get("reference")
-    membership_id = request.GET.get("membership_id")  # from your button
+    data = request.data
+    reference = data.get("reference")
+    membership_id = data.get("membership_id")
 
-    if not reference:
-        return JsonResponse({"error": "No reference returned"}, status=400)
+    if not reference or not membership_id:
+        return JsonResponse({"status": "error", "message": "Missing reference or membership_id"}, status=400)
 
     headers = {"Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}"}
     response = requests.get(
@@ -966,11 +974,7 @@ def agent_payment_callback(request):
     )
     res_data = response.json()
 
-    if res_data["status"] and res_data["data"]["status"] == "success":
-        amount = int(res_data["data"]["amount"]) / 100  # convert kobo to ₦
-        paid_at = res_data["data"]["paid_at"]
-
-        # update meber table
+    if res_data.get("status") and res_data["data"]["status"] == "success":
         try:
             member = Member.objects.get(membership_id=membership_id)
             member.paymentStatus = "paid"
@@ -979,7 +983,6 @@ def agent_payment_callback(request):
         except Member.DoesNotExist:
             pass
 
-        # update kycSubmission payment status if exists matching membership_id
         try:
             kyc = KYCSubmission.objects.get(membership_id=membership_id)
             kyc.paymentStatus = "paid"
@@ -988,11 +991,6 @@ def agent_payment_callback(request):
         except KYCSubmission.DoesNotExist:
             pass
 
-
-        return redirect("/payment/success/")  # success page
+        return JsonResponse({"status": "success", "message": "Payment verified"})
     else:
-        # throw error
-        print(" ERROR OCCURED MEBER NOT FOUND")
-
-
-        return redirect("/payment/failed/")
+        return JsonResponse({"status": "error", "message": "Verification failed"}, status=400)
