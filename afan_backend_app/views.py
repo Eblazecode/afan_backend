@@ -762,6 +762,12 @@ from django.core.mail import send_mail
 from django.contrib.auth.hashers import make_password
 
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from django.core.mail import send_mail
+from django.conf import settings
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def forgot_password(request):
@@ -774,18 +780,21 @@ def forgot_password(request):
     except Member.DoesNotExist:
         return Response({'error': 'No account with this email'}, status=404)
 
-    token = default_token_generator.make_token(member)
+    token = member.set_reset_token()
     reset_link = f"https://www.afannigeria.com/reset-password/{member.id}/{token}/"
 
     send_mail(
         'Reset Your AFAN Password',
         f'Click here to reset your password: {reset_link}',
-        'support@fan.ng',
+        settings.DEFAULT_FROM_EMAIL,
         [email],
         fail_silently=False,
     )
     return Response({'message': 'Password reset link sent to your email'}, status=200)
 
+
+from django.contrib.auth.hashers import make_password
+from django.utils import timezone
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -795,15 +804,18 @@ def reset_password(request, user_id, token):
         return Response({'error': 'Password is required'}, status=400)
 
     try:
-        member = Member.objects.get(id=user_id)
+        member = Member.objects.get(id=user_id, reset_token=token)
     except Member.DoesNotExist:
-        return Response({'error': 'Invalid user'}, status=404)
+        return Response({'error': 'Invalid token or user'}, status=404)
 
-    if not default_token_generator.check_token(member, token):
-        return Response({'error': 'Invalid or expired token'}, status=400)
+    if not member.reset_token_expiry or member.reset_token_expiry < timezone.now():
+        return Response({'error': 'Token expired'}, status=400)
 
     member.password = make_password(password)
+    member.reset_token = None
+    member.reset_token_expiry = None
     member.save()
+
     return Response({'message': 'Password reset successful'}, status=200)
 
 

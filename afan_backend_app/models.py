@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
 from django.contrib.auth.models import User
 from django.db import models
@@ -11,19 +11,6 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.conf import settings
 
-
-
-
-
-# Create your models here.
-import re
-from django.db import models
-from django.core.exceptions import ValidationError
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework_simplejwt.tokens import RefreshToken
 
 
 class MemberManager(BaseUserManager):
@@ -57,6 +44,16 @@ class Member(models.Model):
     kycStatus = models.CharField(default="not_submitted")  # KYC status
     paymentStatus = models.CharField(default="not_paid")  # Payment status
     transaction_id = models.CharField(max_length=100, blank=True, null=True)
+
+    reset_token = models.CharField(max_length=255, blank=True, null=True)
+    reset_token_expiry = models.DateTimeField(blank=True, null=True)
+
+    def set_reset_token(self):
+        import uuid
+        self.reset_token = str(uuid.uuid4())
+        self.reset_token_expiry = timezone.now() + timedelta(hours=1)
+        self.save()
+        return self.reset_token
 
     # Required fields for AbstractBaseUser
     is_active = models.BooleanField(default=True)

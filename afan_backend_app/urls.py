@@ -25,6 +25,7 @@ urlpatterns = [
     path('kyc/submit/', KYCSubmissionView.as_view(), name='kyc-submit'),
 
     path('forgot_password/', views.forgot_password, name='forgot-password'),
+    path('reset_password/<int:user_id>/<str:token>/', views.reset_password, name='reset-password'),
 
     #payment related endpoints
 path(
