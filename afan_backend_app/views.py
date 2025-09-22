@@ -1028,7 +1028,7 @@ def admin_register(request):
             return Response({'error': 'Missing fields'}, status=400)
 
         # if  email exists
-        if Member.objects.filter(email=email).exists():
+        if AdminUser.objects.filter(email=email).exists():
             return Response({'error': 'user already already exists'}, status=400)
 
         # split full name into first/last

@@ -183,6 +183,8 @@ class AdminUser(models.Model):
     last_name = models.CharField(max_length=100)
     email = models.EmailField(unique=True)
     password = models.CharField(max_length=128)
+    state = models.CharField(max_length=100, default="state")
+    lga = models.CharField(max_length=100, default="lga")
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE)
