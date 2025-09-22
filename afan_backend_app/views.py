@@ -18,7 +18,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Member, AgentMember
+from .models import Member, AgentMember, AdminUser
 from .serializers import MemberSerializer
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -776,6 +776,9 @@ def forgot_password(request):
         return Response({'error': 'Email is required'}, status=400)
 
     try:
+        # check member table or agent member table
+
+
         member = Member.objects.get(email=email)
     except Member.DoesNotExist:
         return Response({'error': 'No account with this email'}, status=404)
@@ -1006,3 +1009,84 @@ def agent_payment_callback(request):
         return JsonResponse({"status": "success", "message": "Payment verified"})
     else:
         return JsonResponse({"status": "error", "message": "Verification failed"}, status=400)
+
+
+# ADMIN DASHBOARD SECTION
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def admin_register(request):
+        data = request.data
+        name = data.get('name')
+        email = data.get('email')
+        password = data.get('password')
+        state = data.get('state')
+        lga = data.get('lga')
+
+        print("Received data:", data)  # Debugging line to check received data
+        if not all([name, email, password, state, lga]):
+            return Response({'error': 'Missing fields'}, status=400)
+
+        # if  email exists
+        if Member.objects.filter(email=email).exists():
+            return Response({'error': 'user already already exists'}, status=400)
+
+        # split full name into first/last
+        parts = name.strip().split(" ", 1)
+        first_name = parts[0]
+        last_name = parts[1] if len(parts) > 1 else ""
+
+        import re
+        prefix = "AFAN/ADM"
+        cleaned_state = re.sub(r'\W+', '', str(state)).upper()[:3].ljust(3, 'X')
+        cleaned_lga = re.sub(r'\W+', '', str(lga)).upper()[:3].ljust(3, 'X')
+        count = Member.objects.filter(state=state, lga=lga).count() + 1
+        unique_code = str(count).zfill(5)
+
+        gen_membership_id = f"{prefix}/{cleaned_state}/{cleaned_lga}/{unique_code}"
+
+        # validate format
+        if not re.match(r"^AFAN/ADM/[A-Z]{3}/[A-Z]{3}/\d{5}$", gen_membership_id):
+            raise ValueError("Invalid membership ID format")
+
+        admin = AdminUser.objects.create(
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            state=state,
+            lga=lga,
+            password=password,
+            adminID=gen_membership_id,  # your custom function
+
+        )
+
+        refresh = RefreshToken.for_user(admin)
+        return Response({
+            "user": {
+                "id": admin.id,
+                "name": f"{admin.first_name} {admin.last_name}".strip(),
+                "email": admin.email,
+                "adminID": admin.adminID,
+                "state": admin.state,
+                "lga": admin.lga,
+
+
+            },
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+        }, status=201)
+
+
+
+
+def AdminLogin(request):
+
+    return JsonResponse({"message": "Admin Login - To be implemented"}, status=200)
+
+def AdminDashboard(request):
+    # fetch all members records from KYCSubmission model
+    Allmembers = Member.objects.all()
+
+
+
+    return JsonResponse({"message": "Admin Dashboard - To be implemented"}, status=200)
