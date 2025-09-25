@@ -43,8 +43,10 @@ path(
     path('agent/initiate-payment/', views.initiate_agent_payment, name='initiate_agent_payment'),
     path('agent/farmer-reciept/<path:membership_id>/',agent_get_payment_receipt, name='agent_get_farmer_payment'),
     path('save-transaction/',agent_payment_callback,name='payment callback'),
+
     # admin section APIs
     path('admin/register/', admin_register, name='register_admin'),
+    path('admin_fectch_farmers/', views.admin_fetch_all_farmers, name='admin_fetch_all_farmers'),
 
 ]
 

@@ -1090,3 +1090,35 @@ def AdminDashboard(request):
 
 
     return JsonResponse({"message": "Admin Dashboard - To be implemented"}, status=200)
+
+# fetch all farmers from the KYCSubmission table
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def admin_fetch_all_farmers(request):
+    farmers = KYCSubmission.objects.all().order_by('-submittedAt')
+    farmer_list = [
+        {
+            "membership_id": f.membership_id,
+            "name": f.firstName + " " + f.lastName,
+            "email": f.membership.email if hasattr(f, 'membership') else "",
+            "phoneNumber": f.phoneNumber,
+            "status": f.kycStatus,
+            "registeredAt": f.submittedAt,   # ✅ rename submittedAt -> registeredAt
+            "paymentStatus": f.paymentStatus,
+            "farmType": f.farmType,
+            "farmSize": f.farmSize,
+            "yearsOfExperience": f.yearsOfExperience,
+            "primaryCrops": f.primaryCrops,
+            "farmLocation": f.farmLocation,
+            "state": f.state,
+            "lga": f.lga,
+            "passportPhoto": request.build_absolute_uri(f.passportPhoto.url) if f.passportPhoto else None,
+
+        }
+        for f in farmers
+    ]
+
+    return Response({
+        "data": farmer_list,
+        "count": len(farmer_list)
+    })

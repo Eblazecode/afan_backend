@@ -195,3 +195,4 @@ class AdminUser(models.Model):
         return self.user.username
 
 
+# fetch all farmers inn the KYC table
