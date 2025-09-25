@@ -46,7 +46,7 @@ path(
 
     # admin section APIs
     path('admin/register/', admin_register, name='register_admin'),
-    path('admin_fectch_farmers/', views.admin_fetch_all_farmers, name='admin_fetch_all_farmers'),
+    path('admin_fetch_farmers/', views.admin_fetch_all_farmers, name='admin_fetch_all_farmers'),
 
 ]
 

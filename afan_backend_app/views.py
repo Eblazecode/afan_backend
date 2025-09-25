@@ -1092,18 +1092,30 @@ def AdminDashboard(request):
     return JsonResponse({"message": "Admin Dashboard - To be implemented"}, status=200)
 
 # fetch all farmers from the KYCSubmission table
+import os
+from django.conf import settings
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def admin_fetch_all_farmers(request):
     farmers = KYCSubmission.objects.all().order_by('-submittedAt')
-    farmer_list = [
-        {
+    farmer_list = []
+
+    for f in farmers:
+        # safe check for passport photo
+        passport_url = None
+        if f.passportPhoto:
+            file_path = os.path.join(settings.MEDIA_ROOT, f.passportPhoto.name)
+            if os.path.exists(file_path):
+                passport_url = request.build_absolute_uri(f.passportPhoto.url)
+
+        farmer_list.append({
             "membership_id": f.membership_id,
-            "name": f.firstName + " " + f.lastName,
-            "email": f.membership.email if hasattr(f, 'membership') else "",
+            "name": f"{f.firstName} {f.lastName}",
+            "email": getattr(f.membership, 'email', ""),
             "phoneNumber": f.phoneNumber,
             "status": f.kycStatus,
-            "registeredAt": f.submittedAt,   # ✅ rename submittedAt -> registeredAt
+            "registeredAt": f.submittedAt,
             "paymentStatus": f.paymentStatus,
             "farmType": f.farmType,
             "farmSize": f.farmSize,
@@ -1112,11 +1124,8 @@ def admin_fetch_all_farmers(request):
             "farmLocation": f.farmLocation,
             "state": f.state,
             "lga": f.lga,
-            "passportPhoto": request.build_absolute_uri(f.passportPhoto.url) if f.passportPhoto else None,
-
-        }
-        for f in farmers
-    ]
+            "passportPhoto": passport_url,
+        })
 
     return Response({
         "data": farmer_list,
