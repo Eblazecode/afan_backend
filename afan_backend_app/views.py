@@ -1112,7 +1112,6 @@ def admin_fetch_all_farmers(request):
         farmer_list.append({
             "membership_id": f.membership_id,
             "name": f"{f.firstName} {f.lastName}",
-            "email": getattr(f.membership, 'email', ""),
             "phoneNumber": f.phoneNumber,
             "status": f.kycStatus,
             "registeredAt": f.submittedAt,
