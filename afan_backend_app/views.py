@@ -1089,7 +1089,7 @@ def AdminDashboard(request):
 
 
 
-    return JsonResponse({"message": "Admin Dashboard - To be implemented"}, status=200)
+    return JsonResponse({"message": "Admin Dashboard farmers - To be implemented"}, status=200)
 
 # fetch all farmers from the KYCSubmission table
 import os
