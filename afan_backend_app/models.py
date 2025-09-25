@@ -187,7 +187,7 @@ class AdminUser(models.Model):
     lga = models.CharField(max_length=100, default="lga")
     is_staff = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
     is_superadmin = models.BooleanField(default=False)
 
 
