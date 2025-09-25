@@ -150,7 +150,7 @@ class KYCSubmission(models.Model):
     yearsOfExperience = models.PositiveIntegerField()
     primaryCrops = models.CharField(max_length=255)
     farmLocation = models.TextField()
-    passportPhoto = models.ImageField(upload_to='kyc/passport_photos/')
+    passportPhoto = models.ImageField(upload_to='media/kyc/passport_photos/')
     submittedAt = models.DateTimeField(auto_now_add=True)
     membership_id = models.CharField(max_length=50, unique=True, blank=True, null=True)
     kycStatus = models.CharField(max_length=20, default='not_submitted')  # KYC status
