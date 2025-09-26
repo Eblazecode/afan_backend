@@ -1094,6 +1094,16 @@ def AdminDashboard(request):
 # fetch all farmers from the KYCSubmission table
 import os
 from django.conf import settings
+import os
+from django.conf import settings
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from django.conf import settings
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
@@ -1101,13 +1111,16 @@ def admin_fetch_all_farmers(request):
     farmers = KYCSubmission.objects.all().order_by('-submittedAt')
     farmer_list = []
 
+    # Default passport image (must exist in S3 at kyc/passport_photos/default.png)
+    default_passport_url = request.build_absolute_uri(
+        settings.MEDIA_URL + 'kyc/passport_photos/default.png'
+    )
+
     for f in farmers:
-        # safe check for passport photo
-        passport_url = None
-        if f.passportPhoto:
-            file_path = os.path.join(settings.MEDIA_ROOT, f.passportPhoto.name)
-            if os.path.exists(file_path):
-                passport_url = request.build_absolute_uri(f.passportPhoto.url)
+        passport_url = default_passport_url  # fallback
+
+        if f.passportPhoto and hasattr(f.passportPhoto, 'url'):
+            passport_url = f.passportPhoto.url  # works for S3 and local
 
         farmer_list.append({
             "membership_id": f.membership_id,

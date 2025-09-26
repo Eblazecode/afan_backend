@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'afan_backend_app',
+    'storages',
 ]
 
 MIDDLEWARE = [
@@ -207,3 +208,20 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = "afannigeriainfo@gmail.com"
 EMAIL_HOST_PASSWORD = "evme qwyi mmzh ivre"
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+
+
+
+
+# Use S3 for media files
+DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME")
+AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "us-east-1")  # change if needed
+AWS_QUERYSTRING_AUTH = False  # removes ?AWSAccessKeyId=... tokens from URLs
