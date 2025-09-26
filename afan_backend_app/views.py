@@ -1111,16 +1111,25 @@ def admin_fetch_all_farmers(request):
     farmers = KYCSubmission.objects.all().order_by('-submittedAt')
     farmer_list = []
 
-    # Default passport image (must exist in S3 at kyc/passport_photos/default.png)
-    default_passport_url = request.build_absolute_uri(
-        settings.MEDIA_URL + 'kyc/passport_photos/default.png'
-    )
+    S3_BASE_URL = "https://afan-media.s3.amazonaws.com/"
+    default_passport_url = f"{S3_BASE_URL}kyc/passport_photos/default.png"
 
     for f in farmers:
         passport_url = default_passport_url  # fallback
 
-        if f.passportPhoto and hasattr(f.passportPhoto, 'url'):
-            passport_url = f.passportPhoto.url  # works for S3 and local
+        if f.passportPhoto:
+            # Get path safely
+            photo_path = str(f.passportPhoto)
+
+            # strip accidental "media/" prefix
+            if photo_path.startswith("media/"):
+                photo_path = photo_path.replace("media/", "", 1)
+
+            # If it’s already a full URL (S3 or elsewhere), keep it
+            if photo_path.startswith("http"):
+                passport_url = photo_path
+            else:
+                passport_url = f"{S3_BASE_URL}{photo_path}"
 
         farmer_list.append({
             "membership_id": f.membership_id,
