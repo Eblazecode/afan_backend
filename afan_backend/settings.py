@@ -231,7 +231,7 @@ if os.path.exists(env_file):
     environ.Env.read_env(env_file)
 
 # ✅ Supabase settings
-SUPABASE_URL = env("SUPABASE_URL", default=None)
-SUPABASE_ANON_KEY = env("SUPABASE_ANON_KEY", default=None)
-SUPABASE_SERVICE_ROLE_KEY = env("SUPABASE_SERVICE_ROLE_KEY", default=None)
+SUPABASE_URL = env("SUPABASE_URL", default="https://wpwsglxvzgofzcwvoxjw.supabase.co")
+SUPABASE_ANON_KEY = env("SUPABASE_ANON_KEY", default="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9....")
+SUPABASE_SERVICE_ROLE_KEY = env("SUPABASE_SERVICE_ROLE_KEY", default="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9....")
 SUPABASE_BUCKET_NAME = env("SUPABASE_BUCKET_NAME", default="afan-media")
