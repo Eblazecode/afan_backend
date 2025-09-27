@@ -498,6 +498,39 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
+import os
+from supabase import create_client
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import AllowAny
+from rest_framework.parsers import MultiPartParser, FormParser
+
+# 🔑 Environment variables (set in Heroku Config Vars)
+SUPABASE_URL = settings.SUPABASE_URL
+SUPABASE_ANON_KEY = settings.SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY = settings.SUPABASE_SERVICE_ROLE_KEY
+SUPABASE_BUCKET_NAME = settings.SUPABASE_BUCKET_NAME
+
+supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+
+
+def upload_passport(file, file_name: str):
+    """
+    Upload passport photo to Supabase Storage and return public URL
+    """
+    try:
+        # Upload to Supabase bucket
+        res = supabase.storage.from_(SUPABASE_BUCKET_NAME).upload(file_name, file)
+
+        if res:
+            return supabase.storage.from_(SUPABASE_BUCKET_NAME).get_public_url(file_name)
+        return None
+    except Exception as e:
+        print("❌ Supabase upload error:", e)
+        return None
+
+
 class KYCSubmissionView_agent(APIView):
     permission_classes = [AllowAny]
     parser_classes = [MultiPartParser, FormParser]
@@ -541,7 +574,14 @@ class KYCSubmissionView_agent(APIView):
             # Generate membership_id
             membership_id = gen_membership_id_func(state, lga)
 
-            # ✅ Create KYC record (no email here)
+            # ✅ Upload passport photo to Supabase if provided
+            passport_url = None
+            if passport_photo:
+                ext = passport_photo.name.split('.')[-1]
+                file_name = f"{membership_id}_passport.{ext}"
+                passport_url = upload_passport(passport_photo, file_name)
+
+            # ✅ Create KYC record
             kyc = KYCSubmission.objects.create(
                 firstName=first_name,
                 lastName=last_name,
@@ -555,7 +595,7 @@ class KYCSubmissionView_agent(APIView):
                 yearsOfExperience=years_of_experience,
                 primaryCrops=primary_crops,
                 farmLocation=farm_location,
-                passportPhoto=passport_photo,
+                passportPhoto=passport_url if passport_url else None,
                 membership_id=membership_id,
                 agent_id=agent_id,
                 kycStatus="approved",
@@ -576,7 +616,11 @@ class KYCSubmissionView_agent(APIView):
             )
 
             return Response(
-                {"message": "Farmer record submission successful", "id": kyc.membership_id},
+                {
+                    "message": "Farmer record submission successful",
+                    "id": kyc.membership_id,
+                    "passportPhoto": passport_url,
+                },
                 status=status.HTTP_201_CREATED
             )
 
@@ -1105,31 +1149,27 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from django.conf import settings
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from django.conf import settings
+from supabase import create_client
+import os
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def admin_fetch_all_farmers(request):
     farmers = KYCSubmission.objects.all().order_by('-submittedAt')
     farmer_list = []
 
-    S3_BASE_URL = "https://afan-media.s3.eu-north-1.amazonaws.com/"
-    default_passport_url = f"{S3_BASE_URL}kyc/passport_photos/default.png"
+    # ✅ Default fallback (Supabase public URL for default.png)
+    default_passport_url = supabase.storage.from_(SUPABASE_BUCKET_NAME).get_public_url(
+        "kyc/passport_photos/default.png"
+    )
 
     for f in farmers:
-        passport_url = default_passport_url  # fallback
-
-        if f.passportPhoto:
-            # Get path safely
-            photo_path = str(f.passportPhoto)
-
-            # strip accidental "media/" prefix
-            if photo_path.startswith("media/"):
-                photo_path = photo_path.replace("media/", "", 1)
-
-            # If it’s already a full URL (S3 or elsewhere), keep it
-            if photo_path.startswith("http"):
-                passport_url = photo_path
-            else:
-                passport_url = f"{S3_BASE_URL}{photo_path}"
+        passport_url = f.passportPhoto if f.passportPhoto else default_passport_url
 
         farmer_list.append({
             "membership_id": f.membership_id,

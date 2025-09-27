@@ -49,7 +49,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'afan_backend_app',
-    'storages',
+
 ]
 
 MIDDLEWARE = [
@@ -214,21 +214,24 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 
 # Use S3 for media files
-DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 
-AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
-AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME")
+# settings.py
+import os
+import environ
+from pathlib import Path
 
-# Set the correct bucket region
-AWS_S3_REGION_NAME = os.environ.get("AWS_S3_REGION_NAME", "eu-north-1")  # Stockholm
+BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Make uploaded files publicly readable
-AWS_DEFAULT_ACL = "public-read"
+# Initialise environment variables
+env = environ.Env()
 
-# Disable querystring auth for public files
-AWS_QUERYSTRING_AUTH = False
+# Load local .env file if it exists (Heroku will ignore this, since it injects vars directly)
+env_file = os.path.join(BASE_DIR, ".env")
+if os.path.exists(env_file):
+    environ.Env.read_env(env_file)
 
-# Optional: custom domain for S3 URLs
-AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com'
-MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
+# ✅ Supabase settings
+SUPABASE_URL = env("SUPABASE_URL", default=None)
+SUPABASE_ANON_KEY = env("SUPABASE_ANON_KEY", default=None)
+SUPABASE_SERVICE_ROLE_KEY = env("SUPABASE_SERVICE_ROLE_KEY", default=None)
+SUPABASE_BUCKET_NAME = env("SUPABASE_BUCKET_NAME", default="afan-media")
