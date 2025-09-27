@@ -1,11 +1,13 @@
 import hashlib
 import hmac
+import uuid
 from urllib import request
 from venv import logger
 
 from django.contrib.auth import authenticate
 from django.contrib.auth.hashers import make_password
 from django.contrib.sites import requests
+from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.shortcuts import render
 
 # Create your views here.
@@ -515,21 +517,22 @@ SUPABASE_BUCKET_NAME = settings.SUPABASE_BUCKET_NAME
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 
-def upload_passport(file, file_name: str):
-    """
-    Upload passport photo to Supabase Storage and return public URL
-    """
+def upload_to_supabase(file_obj: InMemoryUploadedFile, folder: str = "kyc/passport_photos"):
     try:
-        # Upload to Supabase bucket
-        res = supabase.storage.from_(SUPABASE_BUCKET_NAME).upload(file_name, file)
+        # Generate a unique filename
+        file_ext = file_obj.name.split(".")[-1]
+        file_name = f"{folder}/{uuid.uuid4()}.{file_ext}"
 
-        if res:
-            return supabase.storage.from_(SUPABASE_BUCKET_NAME).get_public_url(file_name)
-        return None
+        # Upload bytes
+        res = supabase.storage.from_(SUPABASE_BUCKET_NAME).upload(file_name, file_obj.read(), {
+            "content-type": file_obj.content_type
+        })
+
+        # Get public URL
+        return supabase.storage.from_(SUPABASE_BUCKET_NAME).get_public_url(file_name)
     except Exception as e:
-        print("❌ Supabase upload error:", e)
+        print(f"❌ Supabase upload error: {e}")
         return None
-
 
 class KYCSubmissionView_agent(APIView):
     permission_classes = [AllowAny]
