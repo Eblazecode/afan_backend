@@ -1111,7 +1111,7 @@ def admin_fetch_all_farmers(request):
     farmers = KYCSubmission.objects.all().order_by('-submittedAt')
     farmer_list = []
 
-    S3_BASE_URL = "https://afan-media.s3.amazonaws.com/"
+    S3_BASE_URL = "https://afan-media.s3.eu-north-1.amazonaws.com/"
     default_passport_url = f"{S3_BASE_URL}kyc/passport_photos/default.png"
 
     for f in farmers:
