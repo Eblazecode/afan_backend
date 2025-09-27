@@ -517,7 +517,7 @@ SUPABASE_BUCKET_NAME = settings.SUPABASE_BUCKET_NAME
 supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 
-def upload_to_supabase(file_obj: InMemoryUploadedFile, folder: str = "kyc/passport_photos"):
+def upload_to_passport(file_obj: InMemoryUploadedFile, folder: str = "kyc/passport_photos"):
     try:
         # Generate a unique filename
         file_ext = file_obj.name.split(".")[-1]
