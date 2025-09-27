@@ -213,23 +213,22 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 
 
-
-
-
 # Use S3 for media files
 DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 
-AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
-AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
-AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME")
-AWS_S3_REGION_NAME = "eu-north-1"  # change if needed
-AWS_QUERYSTRING_AUTH = False  # removes ?AWSAccessKeyId=... tokens from URLs
+AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
+AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME")
 
+# Set the correct bucket region
+AWS_S3_REGION_NAME = os.environ.get("AWS_S3_REGION_NAME", "eu-north-1")  # Stockholm
 
+# Make uploaded files publicly readable
+AWS_DEFAULT_ACL = "public-read"
 
+# Disable querystring auth for public files
+AWS_QUERYSTRING_AUTH = False
 
-# Full custom domain for S3
+# Optional: custom domain for S3 URLs
 AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
-
-# Media URLs
 MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
