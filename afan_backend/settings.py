@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 
+from django.template.context_processors import media
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -222,3 +224,12 @@ AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 AWS_STORAGE_BUCKET_NAME = os.getenv("AWS_STORAGE_BUCKET_NAME")
 AWS_S3_REGION_NAME = os.getenv("AWS_S3_REGION_NAME", "us-east-1")  # change if needed
 AWS_QUERYSTRING_AUTH = False  # removes ?AWSAccessKeyId=... tokens from URLs
+
+
+
+
+# Full custom domain for S3
+AWS_S3_CUSTOM_DOMAIN = f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
+
+# Media URLs
+MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN}/"
