@@ -267,6 +267,10 @@ def login_agent(request):
         "access": str(refresh.access_token),
     }, status=200)
 
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def login_admin(request):
     email = request.data.get('email')
     password = request.data.get('password')
