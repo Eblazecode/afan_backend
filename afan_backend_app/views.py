@@ -267,6 +267,42 @@ def login_agent(request):
         "access": str(refresh.access_token),
     }, status=200)
 
+def login_admin(request):
+    email = request.data.get('email')
+    password = request.data.get('password')
+
+    if not email or not password:
+        return Response({'error': 'Email and password are required'}, status=400)
+
+    try:
+        admin = AdminUser.objects.get(email=email)  # query by email
+    except AgentMember.DoesNotExist:
+        return Response({'error': 'Invalid email or password'}, status=401)
+
+    if not check_password(password, admin.password):
+        return Response({'error': 'Invalid email or password'}, status=401)
+
+    refresh = RefreshToken.for_user(admin)
+
+    return Response({
+        "user": {
+            "id": admin.id,
+            "name": f"{admin.first_name} {admin.last_name}".strip(),
+            "email": admin.email,
+            "admin_id": admin.adminID, # keep it for reference
+            "role": "admin",
+            "is_superuser": admin.is_superuser,
+            "is_staff": admin.is_staff,
+            "is_active": admin.is_active,
+            "lga": admin.lga,
+            "state": admin.state,
+
+        },
+        "refresh": str(refresh),
+        "access": str(refresh.access_token),
+    }, status=200)
+
+
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
