@@ -190,6 +190,12 @@ class AdminUser(models.Model):
     user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL)
     is_superadmin = models.BooleanField(default=False)
 
+    def save(self, *args, **kwargs):
+
+        if not self.id and self.password:  # hash password on creation
+            self.password = make_password(self.password)
+        super().save(*args, **kwargs)
+
 
     def __str__(self):
         return self.user.username
