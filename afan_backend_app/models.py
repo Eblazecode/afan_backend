@@ -141,6 +141,8 @@ class KYCSubmission(models.Model):
     lastName = models.CharField(max_length=100)
     agent_id = models.CharField(max_length=50, blank=True, null=True)
     phoneNumber = models.CharField(max_length=11)
+    gender =models.CharField(max_length=11, default="gender")
+    DOB = models.DateField( blank=True, null=True)
     nin = models.CharField(max_length=11, unique=True, blank=True, null=True, default=None)
     address = models.TextField()
     state = models.CharField(max_length=100)

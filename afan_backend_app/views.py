@@ -466,6 +466,8 @@ class KYCSubmissionView(APIView):
             first_name = data.get('firstName')
             last_name = data.get('lastName')
             phone_number = data.get('phoneNumber')
+            gender = data.get('gender')
+            DOB = data.get('DOB')
             nin = data.get('nin')
             address = data.get('address')
             state = data.get('state')
@@ -495,6 +497,8 @@ class KYCSubmissionView(APIView):
             kyc = KYCSubmission.objects.create(
                 firstName=first_name,
                 lastName=last_name,
+                gender = gender,
+                DOB = DOB,
                 phoneNumber=phone_number,
                 nin=nin,
                 address=address,
@@ -597,6 +601,8 @@ class KYCSubmissionView_agent(APIView):
             # Extract fields
             first_name = data.get('firstName')
             last_name = data.get('lastName')
+            gender = data.get('gender')
+            DOB = data.get('DOB')
             phone_number = data.get('phoneNumber')
             agent_id = data.get('agent_id')
             nin = data.get('nin')
@@ -634,6 +640,8 @@ class KYCSubmissionView_agent(APIView):
                 firstName=first_name,
                 lastName=last_name,
                 phoneNumber=phone_number,
+                gender=gender,
+                DOB=DOB,
                 nin=nin,
                 address=address,
                 state=state,
@@ -1232,6 +1240,8 @@ def admin_fetch_all_farmers(request):
             "primaryCrops": f.primaryCrops,
             "farmLocation": f.farmLocation,
             "state": f.state,
+            "gender":f.gender,
+            "DOB": f.DOB,
             "lga": f.lga,
             "passportPhoto": passport_url,
         })
