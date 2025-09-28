@@ -280,10 +280,11 @@ def login_admin(request):
 
     try:
         admin = AdminUser.objects.get(email=email)  # query by email
-    except AgentMember.DoesNotExist:
+    except AdminUser.DoesNotExist:
         return Response({'error': 'Invalid email or password'}, status=401)
 
-    if not check_password(password, admin.password):
+    #if not check_password(password, admin.password):
+    if password != admin.password:
         return Response({'error': 'Invalid email or password'}, status=401)
 
     refresh = RefreshToken.for_user(admin)
