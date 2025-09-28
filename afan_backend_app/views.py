@@ -296,9 +296,6 @@ def login_admin(request):
             "email": admin.email,
             "admin_id": admin.adminID, # keep it for reference
             "role": "admin",
-            "is_superuser": admin.is_superuser,
-            "is_staff": admin.is_staff,
-            "is_active": admin.is_active,
             "lga": admin.lga,
             "state": admin.state,
 
