@@ -446,6 +446,13 @@ class KYCSubmissionView(APIView):
             else:
                 print("✅ Membership ID included:", membership_id)
 
+                # ✅ Upload passport photo to Supabase if provided
+                passport_url = None
+            if passport_photo:
+                ext = passport_photo.name.split('.')[-1]
+                file_name = f"{membership_id}_passport.{ext}"
+                passport_url = upload_passport(passport_photo, file_name)
+
             # Create record
             kyc = KYCSubmission.objects.create(
                 firstName=first_name,
@@ -460,7 +467,7 @@ class KYCSubmissionView(APIView):
                 yearsOfExperience=years_of_experience,
                 primaryCrops=primary_crops,
                 farmLocation=farm_location,
-                passportPhoto=passport_photo,
+                passportPhoto=passport_url if passport_url else None,
                 membership_id=membership_id,
                 kycStatus="approved",  # default status
             )
