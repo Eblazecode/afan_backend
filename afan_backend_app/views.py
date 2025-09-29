@@ -1243,6 +1243,7 @@ def admin_fetch_all_farmers(request):
             "gender":f.gender,
             "DOB": f.DOB,
             "lga": f.lga,
+            "position":f.position,
             "passportPhoto": passport_url,
         })
 
@@ -1267,7 +1268,7 @@ def verify_farmer(request, membership_id):
             "status": "verified",
             "farmer": {
                 "id": farmer.membership_id,
-                "name": farmer.name,
+                "name": farmer.firstName + " " + farmer.lastName,
                 "state": farmer.state,
                 "lga": farmer.lga,
                 "farmType": farmer.farmType,
@@ -1277,5 +1278,5 @@ def verify_farmer(request, membership_id):
                 "passportPhoto": farmer.passportPhoto.url if farmer.passportPhoto else None,
             }
         }, status=200)
-    except Farmer.DoesNotExist:
+    except farmer.DoesNotExist:
         return Response({"status": "invalid", "message": "Farmer not found"}, status=404)
