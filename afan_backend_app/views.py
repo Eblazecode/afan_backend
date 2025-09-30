@@ -1261,17 +1261,29 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
   # adjust model name
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from .models import KYCSubmission
+import logging
+
+# ✅ setup logger
+logger = logging.getLogger(__name__)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def verify_farmer(request, membership_id):
+    logger.info(f"🔍 Verifying farmer with membership_id: {membership_id}")
+
     try:
         farmer = KYCSubmission.objects.get(membership_id=membership_id)
+        logger.info(f"✅ Farmer found: {farmer.firstName} {farmer.lastName}, State={farmer.state}, LGA={farmer.lga}")
+
         return Response({
             "status": "verified",
             "farmer": {
                 "id": farmer.membership_id,
-                "name": farmer.firstName + " " + farmer.lastName,
+                "name": f"{farmer.firstName} {farmer.lastName}",
                 "state": farmer.state,
                 "lga": farmer.lga,
                 "farmType": farmer.farmType,
@@ -1279,7 +1291,20 @@ def verify_farmer(request, membership_id):
                 "phoneNumber": farmer.phoneNumber,
                 "yearsOfExperience": farmer.yearsOfExperience,
                 "passportPhoto": farmer.passportPhoto.url if farmer.passportPhoto else None,
+                "produce": farmer.primaryCrops,
             }
         }, status=200)
-    except farmer.DoesNotExist:
-        return Response({"status": "invalid", "message": "Farmer not found"}, status=404)
+
+    except KYCSubmission.DoesNotExist:
+        logger.warning(f"❌ Farmer with membership_id={membership_id} not found")
+        return Response(
+            {"status": "invalid", "message": "Farmer not found"},
+            status=404
+        )
+
+    except Exception as e:
+        logger.error(f"⚠️ Unexpected error while verifying farmer {membership_id}: {str(e)}")
+        return Response(
+            {"status": "error", "message": "Internal server error"},
+            status=500
+        )
