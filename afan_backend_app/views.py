@@ -283,8 +283,7 @@ def login_admin(request):
     except AdminUser.DoesNotExist:
         return Response({'error': 'Invalid email or password'}, status=401)
 
-    #if not check_password(password, admin.password):
-    if password != admin.password:
+    if not check_password(password, admin.password):
         return Response({'error': 'Invalid email or password'}, status=401)
 
     refresh = RefreshToken.for_user(admin)
