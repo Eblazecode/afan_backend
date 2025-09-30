@@ -1238,13 +1238,13 @@ def admin_fetch_all_farmers(request):
             "farmType": f.farmType,
             "farmSize": f.farmSize,
             "yearsOfExperience": f.yearsOfExperience,
-            "primaryCrops": f.primaryCrops,
             "farmLocation": f.farmLocation,
             "state": f.state,
             "gender":f.gender,
             "DOB": f.DOB,
             "lga": f.lga,
             "position":f.position,
+            "produce":f.primaryCrops,
             "passportPhoto": passport_url,
             "submissiondate": f.submittedAt,
         })
@@ -1290,7 +1290,7 @@ def verify_farmer(request, membership_id):
                 "phoneNumber": farmer.phoneNumber,
                 "yearsOfExperience": farmer.yearsOfExperience,
                 "passportPhoto": farmer.passportPhoto.url if farmer.passportPhoto else None,
-                "produce": farmer.primaryCrops,
+                "primaryCrops": farmer.primaryCrops,
             }
         }, status=200)
 
