@@ -1227,6 +1227,8 @@ def admin_fetch_all_farmers(request):
     for f in farmers:
         passport_url = f.passportPhoto if f.passportPhoto else default_passport_url
 
+        #
+
         farmer_list.append({
             "membership_id": f.membership_id,
             "name": f"{f.firstName} {f.lastName}",
@@ -1245,6 +1247,7 @@ def admin_fetch_all_farmers(request):
             "lga": f.lga,
             "position":f.position,
             "passportPhoto": passport_url,
+            "submissiondate": f.submittedAt,
         })
 
     return Response({
