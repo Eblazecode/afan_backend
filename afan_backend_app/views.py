@@ -471,6 +471,11 @@ class KYCSubmissionView(APIView):
             address = data.get('address')
             state = data.get('state')
             lga = data.get('lga')
+            farmingSeason = data.get('farmingSeason')
+            farmingCommunity = data.get('farmingCommunity')
+            ward = data.get('ward')
+            education = data.get('education')
+            secondaryCrop = data.get('secondaryCrop')
             farm_type = data.get('farmType')
             farm_size = data.get('farmSize')
             years_of_experience = data.get('yearsOfExperience')
@@ -498,6 +503,11 @@ class KYCSubmissionView(APIView):
                 lastName=last_name,
                 gender = gender,
                 DOB = DOB,
+                farmingSeason = farmingSeason,
+                farmingCommunity = farmingCommunity,
+                ward = ward,
+                education = education,
+                secondaryCrop = secondaryCrop,
                 phoneNumber=phone_number,
                 nin=nin,
                 address=address,
