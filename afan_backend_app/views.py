@@ -507,7 +507,7 @@ class KYCSubmissionView(APIView):
                 farmingCommunity = farmingCommunity,
                 ward = ward,
                 education = education,
-                secondaryCrop = secondaryCrop,
+                secondaryCrops = secondaryCrop,
                 phoneNumber=phone_number,
                 nin=nin,
                 address=address,
