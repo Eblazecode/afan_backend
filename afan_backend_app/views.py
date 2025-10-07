@@ -1353,8 +1353,7 @@ from .models import KYCSubmission
 # Setup logger
 logger = logging.getLogger(__name__)
 
-@api_view(['GET'])
-@permission_classes([AllowAny])
+
 @method_decorator(csrf_exempt, name='dispatch')
 class FarmerDetailView(View):
 
