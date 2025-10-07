@@ -144,7 +144,7 @@ class KYCSubmission(models.Model):
     gender =models.CharField(max_length=11, default="gender")
     DOB = models.DateField( blank=True, null=True)
     nin = models.CharField(max_length=11, unique=True, blank=True, null=True, default=None)
-    education = models.CharField(max_length=11, blank=True, null=True, default=None)
+    education = models.CharField(max_length=100, blank=True, null=True, default=None)
     position = models.CharField(max_length=500, default="member", blank=True, null=True)
     address = models.TextField()
     state = models.CharField(max_length=100)
