@@ -1341,12 +1341,34 @@ def verify_farmer(request, membership_id):
 
 
 
+import json
+import logging
+from django.http import JsonResponse
+from django.views import View
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import get_object_or_404
+from .models import KYCSubmission
+
+# Setup logger
+logger = logging.getLogger(__name__)
+
 @method_decorator(csrf_exempt, name='dispatch')
 class FarmerDetailView(View):
 
     def get(self, request, membership_id):
-        """Fetch a farmer by membership_id"""
-        farmer = get_object_or_404(KYCSubmission, membership_id=membership_id)
+        """Fetch a farmer by membership_id with debug logs"""
+        print("\n====== DEBUG: FETCH FARMER START ======")
+        print(f"📩 Incoming membership_id: {membership_id}")
+
+        try:
+            farmer = get_object_or_404(KYCSubmission, membership_id=membership_id)
+            print(f"✅ Farmer found: {farmer.firstName} {farmer.lastName} ({farmer.membership_id})")
+        except Exception as e:
+            print(f"❌ ERROR fetching farmer: {e}")
+            print("====== DEBUG: FETCH FARMER END ======\n")
+            return JsonResponse({"error": "Farmer not found"}, status=404)
+
         data = {
             "firstName": farmer.firstName,
             "lastName": farmer.lastName,
@@ -1370,21 +1392,41 @@ class FarmerDetailView(View):
             "passportPhoto": farmer.passportPhoto,
             "membership_id": farmer.membership_id,
         }
+
+        print("📤 Farmer data prepared successfully")
+        print("====== DEBUG: FETCH FARMER END ======\n")
+
         return JsonResponse(data, safe=False, status=200)
 
     def put(self, request, membership_id):
-        """Update a farmer record"""
-        farmer = get_object_or_404(KYCSubmission, membership_id=membership_id)
+        """Update a farmer record with debug logs"""
+        print("\n====== DEBUG: UPDATE FARMER START ======")
+        print(f"📩 Incoming membership_id: {membership_id}")
+
+        try:
+            farmer = get_object_or_404(KYCSubmission, membership_id=membership_id)
+            print(f"✅ Farmer found for update: {farmer.firstName} {farmer.lastName}")
+        except Exception as e:
+            print(f"❌ ERROR fetching farmer for update: {e}")
+            print("====== DEBUG: UPDATE FARMER END ======\n")
+            return JsonResponse({"error": "Farmer not found"}, status=404)
 
         try:
             body = json.loads(request.body.decode('utf-8'))
-        except json.JSONDecodeError:
+            print(f"🧾 Incoming JSON body: {body}")
+        except json.JSONDecodeError as e:
+            print(f"❌ JSON decode error: {e}")
+            print("====== DEBUG: UPDATE FARMER END ======\n")
             return JsonResponse({"error": "Invalid JSON"}, status=400)
 
-        # Update fields dynamically
+        updated_fields = []
         for field, value in body.items():
             if hasattr(farmer, field):
                 setattr(farmer, field, value)
+                updated_fields.append(field)
 
         farmer.save()
+        print(f"✅ Updated fields: {updated_fields}")
+        print("====== DEBUG: UPDATE FARMER END ======\n")
+
         return JsonResponse({"message": "Farmer record updated successfully!"}, status=200)
