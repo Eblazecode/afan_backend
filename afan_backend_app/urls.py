@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from . import views
+from .models import FarmerDetailView
 from .views import MemberViewSet, register_member, get_user_profile, KYCSubmissionView, KYCSubmissionView_agent, \
     verify_payment, register_agent, get_farmers_by_agent, agent_get_payment_receipt, agent_payment_callback, \
     admin_register
@@ -49,6 +50,10 @@ path(
     path('admin/login/', views.login_admin, name='login_admin'),
     path('admin_fetch_farmers/', views.admin_fetch_all_farmers, name='admin_fetch_all_farmers'),
     path("verify/<path:membership_id>/", views.verify_farmer, name="verify_farmer"),
+
+    # update farmers records
+    path('fetch/<str:membership_id>/', FarmerDetailView.as_view(), name='fetch_farmer'),
+    path('update/<str:membership_id>/', FarmerDetailView.as_view(), name='update_farmer'),
 
 ]
 

@@ -261,3 +261,61 @@ class BOA(models.Model):
     def get_membership_id(self):
         return self.membership_id if self.membership_id else "Not Assigned"
     # -*- coding: utf-8 -*-
+
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import get_object_or_404
+from django.utils.decorators import method_decorator
+from django.views import View
+import json
+from .models import KYCSubmission
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class FarmerDetailView(View):
+
+    def get(self, request, membership_id):
+        """Fetch a farmer by membership_id"""
+        farmer = get_object_or_404(KYCSubmission, membership_id=membership_id)
+        data = {
+            "firstName": farmer.firstName,
+            "lastName": farmer.lastName,
+            "phoneNumber": farmer.phoneNumber,
+            "nin": farmer.nin,
+            "education": farmer.education,
+            "gender": farmer.gender,
+            "DOB": farmer.DOB,
+            "address": farmer.address,
+            "state": farmer.state,
+            "lga": farmer.lga,
+            "ward": farmer.ward,
+            "farmingCommunity": farmer.farmingCommunity,
+            "farmingSeason": farmer.farmingSeason,
+            "farmType": farmer.farmType,
+            "farmSize": str(farmer.farmSize),
+            "yearsOfExperience": farmer.yearsOfExperience,
+            "primaryCrops": farmer.primaryCrops,
+            "secondaryCrops": farmer.secondaryCrops,
+            "farmLocation": farmer.farmLocation,
+            "passportPhoto": farmer.passportPhoto,
+            "membership_id": farmer.membership_id,
+        }
+        return JsonResponse(data, safe=False, status=200)
+
+    def put(self, request, membership_id):
+        """Update a farmer record"""
+        farmer = get_object_or_404(KYCSubmission, membership_id=membership_id)
+
+        try:
+            body = json.loads(request.body.decode('utf-8'))
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+        # Update fields dynamically
+        for field, value in body.items():
+            if hasattr(farmer, field):
+                setattr(farmer, field, value)
+
+        farmer.save()
+        return JsonResponse({"message": "Farmer record updated successfully!"}, status=200)
