@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from . import views
-from .models import FarmerDetailView
+from .views import FarmerDetailView
 from .views import MemberViewSet, register_member, get_user_profile, KYCSubmissionView, KYCSubmissionView_agent, \
     verify_payment, register_agent, get_farmers_by_agent, agent_get_payment_receipt, agent_payment_callback, \
     admin_register
