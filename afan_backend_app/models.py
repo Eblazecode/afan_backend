@@ -146,7 +146,7 @@ class KYCSubmission(models.Model):
     nin = models.CharField(max_length=11, unique=True, blank=True, null=True, default=None)
     education = models.CharField(max_length=100, blank=True, null=True, default=None)
     position = models.CharField(max_length=500, default="member", blank=True, null=True)
-    address = models.TextField()
+    address = models.TextField(max_length=500, default="address", blank=True, null=True )
     state = models.CharField(max_length=100)
     lga = models.CharField(max_length=100)
     ward= models.CharField(max_length=100, blank=True, null=True)
