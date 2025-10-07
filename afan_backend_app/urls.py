@@ -52,8 +52,8 @@ path(
     path("verify/<path:membership_id>/", views.verify_farmer, name="verify_farmer"),
 
     # update farmers records
-    path('fetch/<path:membership_id>/', FarmerDetailView.as_view(), name='fetch_farmer'),
-    path('update/<path:membership_id>/', FarmerDetailView.as_view(), name='update_farmer'),
+    path('kyc/fetch/<path:membership_id>/', FarmerDetailView.as_view(), name='fetch_farmer'),
+    path('kyc/update/<path:membership_id>/', FarmerDetailView.as_view(), name='update_farmer'),
 
 ]
 
