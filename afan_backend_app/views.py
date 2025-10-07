@@ -1354,6 +1354,14 @@ from .models import KYCSubmission
 logger = logging.getLogger(__name__)
 
 
+from django.http import JsonResponse
+from django.views import View
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import get_object_or_404
+from .models import KYCSubmission
+import json
+
 @method_decorator(csrf_exempt, name='dispatch')
 class FarmerDetailView(View):
 
