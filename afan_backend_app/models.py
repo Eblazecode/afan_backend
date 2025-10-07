@@ -210,3 +210,53 @@ class AdminUser(models.Model):
 
 
 # fetch all farmers inn the KYC table
+
+class BOA(models.Model):
+    FARM_TYPES = [
+        ('Crop Farming', 'Crop Farming'),
+        ('Livestock Farming', 'Livestock Farming'),
+        ('Poultry Farming', 'Poultry Farming'),
+        ('Fish Farming', 'Fish Farming'),
+        ('Mixed Farming', 'Mixed Farming'),
+        ('Horticulture', 'Horticulture'),
+        ('Forestry', 'Forestry'),
+        ('Other', 'Other'),
+    ]
+
+    firstName = models.CharField(max_length=100)
+    lastName = models.CharField(max_length=100)
+    agent_id = models.CharField(max_length=50, blank=True, null=True)
+    phoneNumber = models.CharField(max_length=11)
+    gender =models.CharField(max_length=11, default="gender")
+    DOB = models.DateField( blank=True, null=True)
+    nin = models.CharField(max_length=11, unique=True, blank=True, null=True, default=None)
+    education = models.CharField(max_length=11, blank=True, null=True, default=None)
+    position = models.CharField(max_length=500, default="member", blank=True, null=True)
+    address = models.TextField()
+    state = models.CharField(max_length=100)
+    lga = models.CharField(max_length=100)
+    ward= models.CharField(max_length=100, blank=True, null=True)
+    farmingCommunity = models.CharField(max_length=100,default="Farming community")
+    farmingSeason = models.CharField(max_length=100,default="Farming season")
+    farmType = models.CharField(max_length=50, choices=FARM_TYPES)
+    farmSize = models.DecimalField(max_digits=10, decimal_places=2)
+    yearsOfExperience = models.PositiveIntegerField()
+    primaryCrops = models.CharField(max_length=255)
+    secondaryCrops = models.CharField(max_length=255, blank=True, null=True)
+    farmLocation = models.TextField()
+    passportPhoto = models.URLField(max_length=500, blank=True, null=True)
+    submittedAt = models.DateTimeField(auto_now_add=True)
+    membership_id = models.CharField(max_length=50, unique=True, blank=True, null=True)
+    kycStatus = models.CharField(max_length=20, default='not_submitted')  # KYC status
+    paymentStatus = models.CharField(max_length=20, default='not_paid')  # Payment status
+    transaction_id = models.CharField(max_length=100, blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.firstName} {self.lastName} - {self.phoneNumber}"
+
+
+
+    # display the membership ID to frontend
+    def get_membership_id(self):
+        return self.membership_id if self.membership_id else "Not Assigned"
+    # -*- coding: utf-8 -*-

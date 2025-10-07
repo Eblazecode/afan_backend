@@ -475,11 +475,11 @@ class KYCSubmissionView(APIView):
             farmingCommunity = data.get('farmingCommunity')
             ward = data.get('ward')
             education = data.get('education')
-            secondaryCrop = data.get('secondaryCrop')
+            secondary_commodity = data.get('secondaryCommodity')
             farm_type = data.get('farmType')
             farm_size = data.get('farmSize')
             years_of_experience = data.get('yearsOfExperience')
-            primary_crops = data.get('primaryCrops')
+            primary_commodity = data.get('primaryCommodity')
             farm_location = data.get('farmLocation')
             passport_photo = files.get('passportPhoto')
             membership_id = data.get('membership_id')
@@ -507,7 +507,7 @@ class KYCSubmissionView(APIView):
                 farmingCommunity = farmingCommunity,
                 ward = ward,
                 education = education,
-                secondaryCrops = secondaryCrop,
+                secondaryCrops = secondary_commodity,
                 phoneNumber=phone_number,
                 nin=nin,
                 address=address,
@@ -516,7 +516,7 @@ class KYCSubmissionView(APIView):
                 farmType=farm_type,
                 farmSize=farm_size,
                 yearsOfExperience=years_of_experience,
-                primaryCrops=primary_crops,
+                primaryCrops=primary_commodity,
                 farmLocation=farm_location,
                 passportPhoto=passport_url if passport_url else None,
                 membership_id=membership_id,
@@ -615,13 +615,18 @@ class KYCSubmissionView_agent(APIView):
             phone_number = data.get('phoneNumber')
             agent_id = data.get('agent_id')
             nin = data.get('nin')
+            farmingSeason = data.get('farmingSeason')
+            farmingCommunity = data.get('farmingCommunity')
+            ward = data.get('ward')
+            education = data.get('education')
+            secondary_commodity = data.get('secondaryCommodity')
             address = data.get('address')
             state = data.get('state')
             lga = data.get('lga')
             farm_type = data.get('farmType')
             farm_size = data.get('farmSize')
             years_of_experience = data.get('yearsOfExperience')
-            primary_crops = data.get('primaryCrops')
+            primary_commodity = data.get('primaryCommodity')
             farm_location = data.get('farmLocation')
             passport_photo = files.get('passportPhoto')
 
@@ -651,6 +656,11 @@ class KYCSubmissionView_agent(APIView):
                 phoneNumber=phone_number,
                 gender=gender,
                 DOB=DOB,
+                farmingSeason=farmingSeason,
+                farmingCommunity=farmingCommunity,
+                ward=ward,
+                education=education,
+                secondaryCrops=secondary_commodity,
                 nin=nin,
                 address=address,
                 state=state,
@@ -658,7 +668,7 @@ class KYCSubmissionView_agent(APIView):
                 farmType=farm_type,
                 farmSize=farm_size,
                 yearsOfExperience=years_of_experience,
-                primaryCrops=primary_crops,
+                primaryCrops=primary_commodity,
                 farmLocation=farm_location,
                 passportPhoto=passport_url if passport_url else None,
                 membership_id=membership_id,
