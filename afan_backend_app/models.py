@@ -86,12 +86,17 @@ class AgentMember(models.Model):
     last_name = models.CharField(max_length=100, blank=True, default="last_name")
     state = models.CharField(max_length=100, default="state")
     lga = models.CharField(max_length=100, default="lga")
+    ward = models.CharField(max_length=100, default="ward")
+    phoneNumber = models.CharField(max_length=12, default="phoneNumber")
+    nin = models.CharField(max_length=12, default="nin")
+    # passportPhoto = models.URLField(max_length=500, blank=True, null=True)
     agent_id = models.CharField(max_length=50, unique=True, blank=True, null=False)
     password = models.CharField(max_length=128, default='password')  # store hashed password
     registration_date = models.DateTimeField(auto_now_add=True)
     kycStatus = models.CharField(default="not_submitted")  # KYC status
     paymentStatus = models.CharField(default="not_paid")  # Payment status
     transaction_id = models.CharField(max_length=100, blank=True, null=True)
+    approval_status = models.BooleanField(default=False)
 
     # Required fields for AbstractBaseUser
     is_active = models.BooleanField(default=True)

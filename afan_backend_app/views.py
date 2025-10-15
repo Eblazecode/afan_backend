@@ -170,6 +170,9 @@ def register_agent(request):
     password = data.get('password')
     state = data.get('state')
     lga = data.get('lga')
+    ward = data.get('ward')
+    nin = data.get('nin')
+    phoneNumber = data.get('phoneNumber')
 
 
     print("Received data:", data)  # Debugging line to check received data
@@ -205,7 +208,10 @@ def register_agent(request):
         state=state,
         lga=lga,
         password=password,
-        agent_id= gen_membership_id,  # your custom function
+        agent_id= gen_membership_id, # your custom function
+        ward=ward,
+        nin=nin,
+        phoneNumber = phoneNumber,
 
     )
 
@@ -1278,6 +1284,43 @@ def admin_fetch_all_farmers(request):
     return Response({
         "data": farmer_list,
         "count": len(farmer_list)
+    })
+
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def admin_fetch_all_agents(request):
+    agents = KYCSubmission.objects.all().order_by('-submittedAt')
+    agents_list = []
+
+    # ✅ Default fallback (Supabase public URL for default.png)
+    default_passport_url = supabase.storage.from_(SUPABASE_BUCKET_NAME).get_public_url(
+        "kyc/passport_photos/default.png"
+    )
+
+    for a in agents:
+        passport_url = a.passportPhoto if a.passportPhoto else default_passport_url
+
+        #
+
+        agents_list.append({
+            "agent_id": a.agent_id,
+            "name": f"{a.firstName} {a.lastName}",
+            "phoneNumber": a.phoneNumber,
+            "state": a.state,
+            "lga": a.lga,
+            "ward": a.ward,
+            "registeredAt": a.submittedAt,
+            "nin": a.nin,
+
+            "passportPhoto": passport_url,
+
+        })
+
+    return Response({
+        "data": agents_list,
+        "count": len(agents_list)
     })
 
 
