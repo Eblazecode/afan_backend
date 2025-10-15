@@ -1268,7 +1268,9 @@ def admin_fetch_all_farmers(request):
             "DOB": f.DOB,
             "lga": f.lga,
             "position":f.position,
-            "produce":f.primaryCrops,
+            "primaryCrops":f.primaryCrops,
+            "secondaryCrops":f.secondaryCrops,
+            "ward":f.ward,
             "passportPhoto": passport_url,
             "submissiondate": f.submittedAt,
         })
