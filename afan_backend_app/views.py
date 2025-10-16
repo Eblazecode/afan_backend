@@ -1519,7 +1519,7 @@ def approve_agent(request, id):
             agent = AgentMember.objects.get(id=id)
             agent.status = "Approved"
             agent.save()
-            return Response({"message": f"Agent {agent.full_name} approved successfully"}, status=status.HTTP_200_OK)
+            return Response({"message": f"Agent {agent.first_name} approved successfully"}, status=status.HTTP_200_OK)
         except AgentMember.DoesNotExist:
             return Response({"error": "Agent not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -1530,7 +1530,7 @@ def suspend_agent(request, id):
             agent = AgentMember.objects.get(id=id)
             agent.status = "Suspended"
             agent.save()
-            return Response({"message": f"Agent {agent.full_name} suspended successfully"}, status=status.HTTP_200_OK)
+            return Response({"message": f"Agent {agent.first_name} suspended successfully"}, status=status.HTTP_200_OK)
         except AgentMember.DoesNotExist:
             return Response({"error": "Agent not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -1539,7 +1539,7 @@ def delete_agent(request, id):
         """🗑️ Delete an agent"""
         try:
             agent = AgentMember.objects.get(id=id)
-            name = agent.full_name
+            name = agent.first_name
             agent.delete()
             return Response({"message": f"Agent {name} deleted successfully"}, status=status.HTTP_200_OK)
         except AgentMember.DoesNotExist:
