@@ -1318,9 +1318,9 @@ def admin_fetch_all_agents(request):
     default_passport_url = supabase.storage.from_(SUPABASE_BUCKET_NAME).get_public_url(
         "kyc/passport_photos/default.png"
     )
+    # passport_url = a.passportPhoto if a.passportPhoto else default_passport_url
 
     for a in agents:
-        passport_url = a.passportPhoto if a.passportPhoto else default_passport_url
 
         #
 
@@ -1336,10 +1336,10 @@ def admin_fetch_all_agents(request):
             "DOB": a.DOB,
             "nin": a.nin,
 
-            "passportPhoto": passport_url,
+
 
         })
-
+    #    "passportPhoto": passport_url,
     return Response({
         "data": agents_list,
         "count": len(agents_list)
