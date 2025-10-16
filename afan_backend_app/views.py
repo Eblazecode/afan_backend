@@ -1331,12 +1331,13 @@ def admin_fetch_all_agents(request):
             "state": a.state,
             "lga": a.lga,
             "ward": a.ward,
-            "registeration_date": a.registration_date,
+            "registration_date": a.registration_date,
             "email": a.email,
             "DOB": a.DOB,
             "gender":a.gender,
             "education": a.education,
             "nin": a.nin,
+            "approval_status":a.approval_status,
 
 
 
