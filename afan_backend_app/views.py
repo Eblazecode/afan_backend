@@ -1337,7 +1337,7 @@ def admin_fetch_all_agents(request):
             "gender":a.gender,
             "education": a.education,
             "nin": a.nin,
-            "approval_status":a.approval_status,
+            "status":a.approval_status,
 
 
 

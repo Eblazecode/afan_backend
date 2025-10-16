@@ -99,7 +99,7 @@ class AgentMember(models.Model):
     kycStatus = models.CharField(default="not_submitted")  # KYC status
     paymentStatus = models.CharField(default="not_paid")  # Payment status
     transaction_id = models.CharField(max_length=100, blank=True, null=True)
-    status = models.CharField(max_length=100, default="Suspended", blank=True, null=False)
+    status = models.CharField(max_length=15, default="Suspended", blank=True, null=False)
 
     # Required fields for AbstractBaseUser
     is_active = models.BooleanField(default=True)
