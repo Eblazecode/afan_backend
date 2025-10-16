@@ -10,16 +10,8 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='agentmember',
-            name='nin',
-            field=models.CharField(default='nin', max_length=12),
-        ),
-        migrations.AddField(
-            model_name='agentmember',
-            name='phoneNumber',
-            field=models.CharField(default='phoneNumber', max_length=12),
-        ),
+
+
         migrations.AddField(
             model_name='agentmember',
             name='ward',
