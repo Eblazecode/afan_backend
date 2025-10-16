@@ -88,7 +88,6 @@ class AgentMember(models.Model):
     lga = models.CharField(max_length=100, default="lga")
     ward = models.CharField(max_length=100, default="ward")
     phoneNumber = models.CharField(max_length=11, default="phoneNumber")
-    nin = models.CharField(max_length=11, unique=True, blank=True, null=False)
 
     # passportPhoto = models.URLField(max_length=500, blank=True, null=True)
     agent_id = models.CharField(max_length=50, unique=True, blank=True, null=False)
