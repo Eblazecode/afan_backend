@@ -1311,7 +1311,7 @@ def admin_fetch_all_farmers(request):
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def admin_fetch_all_agents(request):
-    agents = KYCSubmission.objects.all().order_by('-submittedAt')
+    agents = AgentMember.objects.all().order_by('-registration_date')
     agents_list = []
 
     # ✅ Default fallback (Supabase public URL for default.png)
@@ -1331,7 +1331,9 @@ def admin_fetch_all_agents(request):
             "state": a.state,
             "lga": a.lga,
             "ward": a.ward,
-            "registeredAt": a.submittedAt,
+            "registeration_date": a.registration_date,
+            "email": a.email,
+            "DOB": a.DOB,
             "nin": a.nin,
 
             "passportPhoto": passport_url,

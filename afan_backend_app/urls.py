@@ -49,6 +49,7 @@ path(
     path('admin/register/', admin_register, name='register_admin'),
     path('admin/login/', views.login_admin, name='login_admin'),
     path('admin_fetch_farmers/', views.admin_fetch_all_farmers, name='admin_fetch_all_farmers'),
+    path('admin_fetch_agents/', views.admin_fetch_all_agents, name='admin_fetch_all_agents'),
     path("verify/<path:membership_id>/", views.verify_farmer, name="verify_farmer"),
 
     # update farmers records
