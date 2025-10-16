@@ -1326,7 +1326,7 @@ def admin_fetch_all_agents(request):
 
         agents_list.append({
             "agent_id": a.agent_id,
-            "name": f"{a.firstName} {a.lastName}",
+            "name": f"{a.first_name} {a.last_name}",
             "phoneNumber": a.phoneNumber,
             "state": a.state,
             "lga": a.lga,
