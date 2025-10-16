@@ -1509,3 +1509,38 @@ class FarmerDetailView(View):
         print("====== DEBUG: UPDATE FARMER END ======\n")
 
         return JsonResponse({"message": "Farmer record updated successfully!"}, status=200)
+
+
+
+@api_view(['POST'])
+def approve_agent(request, id):
+        """✅ Approve an agent"""
+        try:
+            agent = AgentMember.objects.get(id=id)
+            agent.status = "Approved"
+            agent.save()
+            return Response({"message": f"Agent {agent.full_name} approved successfully"}, status=status.HTTP_200_OK)
+        except AgentMember.DoesNotExist:
+            return Response({"error": "Agent not found"}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['POST'])
+def suspend_agent(request, id):
+        """🚫 Suspend an agent"""
+        try:
+            agent = AgentMember.objects.get(id=id)
+            agent.status = "Suspended"
+            agent.save()
+            return Response({"message": f"Agent {agent.full_name} suspended successfully"}, status=status.HTTP_200_OK)
+        except AgentMember.DoesNotExist:
+            return Response({"error": "Agent not found"}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['DELETE'])
+def delete_agent(request, id):
+        """🗑️ Delete an agent"""
+        try:
+            agent = AgentMember.objects.get(id=id)
+            name = agent.full_name
+            agent.delete()
+            return Response({"message": f"Agent {name} deleted successfully"}, status=status.HTTP_200_OK)
+        except AgentMember.DoesNotExist:
+            return Response({"error": "Agent not found"}, status=status.HTTP_404_NOT_FOUND)
