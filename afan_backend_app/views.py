@@ -173,15 +173,25 @@ def register_agent(request):
     ward = data.get('ward')
     nin = data.get('nin')
     phoneNumber = data.get('phoneNumber')
+    DOB = data.get('DOB')
+    education = data.get('education')
+    gender = data.get('gender')
 
 
     print("Received data:", data)  # Debugging line to check received data
-    if not all([name, email, password, state, lga, ward, nin, phoneNumber]):
+    if not all([name, email, password, state, lga, ward, nin, phoneNumber, DOB, education, gender]):
         return Response({'error': 'Missing fields'}, status=400)
 
     # if  email exists
     if Member.objects.filter(email=email).exists():
-        return Response({'error': 'user already already exists'}, status=400)
+        return Response({'error': 'user email already already exists'}, status=400)
+
+    # if phoneNumber exists
+    if AgentMember.objects.filter(phoneNumber=phoneNumber).exists():
+        return Response({'error': 'Phone number already exists'}, status=400)
+
+    if AgentMember.objects.filter(nin=nin).exists():
+        return Response({'error': 'NIN already exists'}, status=400)
 
     # split full name into first/last
     parts = name.strip().split(" ", 1)
@@ -212,6 +222,9 @@ def register_agent(request):
         ward=ward,
         nin=nin,
         phoneNumber = phoneNumber,
+        DOB=DOB,
+        gender=gender,
+        education=education,
 
     )
 
@@ -227,6 +240,10 @@ def register_agent(request):
             "ward": agentmember.ward,
             "phoneNumber": agentmember.phoneNumber,
             "nin": agentmember.nin,
+            "DOB": agentmember.DOB,
+            "education": agentmember.education,
+            "gender":agentmember.gender,
+            "registration_date": agentmember.registration_date,
             "kycStatus": agentmember.kycStatus,
             "paymentStatus":agentmember.paymentStatus,
 

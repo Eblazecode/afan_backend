@@ -89,6 +89,9 @@ class AgentMember(models.Model):
     ward = models.CharField(max_length=100, default="ward", blank=True, null=True)
     nin = models.CharField(max_length=12, unique=True, blank=True, null=True, default=None)
     phoneNumber = models.CharField(max_length=11, unique=True, blank=True, null=True, default=None)
+    DOB = models.DateField( blank=True, null=True)
+    gender = models.CharField(max_length=10, default="male", blank=True, null=True)
+    education = models.CharField(max_length=10, default="other", blank=True, null=True)
     # passportPhoto = models.URLField(max_length=500, blank=True, null=True)
     agent_id = models.CharField(max_length=50, unique=True, blank=True, null=False)
     password = models.CharField(max_length=128, default='password')  # store hashed password
