@@ -1334,6 +1334,8 @@ def admin_fetch_all_agents(request):
             "registeration_date": a.registration_date,
             "email": a.email,
             "DOB": a.DOB,
+            "gender":a.gender,
+            "education": a.education,
             "nin": a.nin,
 
 
