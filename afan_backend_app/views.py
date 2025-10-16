@@ -176,7 +176,7 @@ def register_agent(request):
 
 
     print("Received data:", data)  # Debugging line to check received data
-    if not all([name, email, password, state, lga]):
+    if not all([name, email, password, state, lga, ward, nin, phoneNumber]):
         return Response({'error': 'Missing fields'}, status=400)
 
     # if  email exists
@@ -224,6 +224,9 @@ def register_agent(request):
             "membership_id": agentmember.agent_id,
             "state": agentmember.state,
             "lga": agentmember.lga,
+            "ward": agentmember.ward,
+            "phoneNumber": agentmember.phoneNumber,
+            "nin": agentmember.nin,
             "kycStatus": agentmember.kycStatus,
             "paymentStatus":agentmember.paymentStatus,
 
