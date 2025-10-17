@@ -282,10 +282,13 @@ def login_agent(request):
         return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
 
     # 🔐 Check password
-    if not check_password(password, agent.password):
-        return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
+    # Debugging: check password
+    is_valid_password = check_password(password, agent.password)
+    logger.debug(f"Password check for {email}: {is_valid_password}")
 
-
+    if not is_valid_password:
+        logger.warning(f"Invalid password attempt for email: {email}")
+        return Response({'error': 'Invalid email or password'}, status=401)
 
 
     # ✅ Generate token only if approved
