@@ -1511,38 +1511,94 @@ class FarmerDetailView(View):
         return JsonResponse({"message": "Farmer record updated successfully!"}, status=200)
 
 
+
+
+
 @permission_classes([AllowAny])
 @api_view(['POST'])
 def approve_agent(request, id):
-        """✅ Approve an agent"""
-        try:
-            agent = AgentMember.objects.get(agent_id=id)
-            agent.approval_status  = "Approved"
-            agent.save()
-            return Response({"message": f"Agent {agent.first_name} approved successfully"}, status=status.HTTP_200_OK)
-        except AgentMember.DoesNotExist:
-            return Response({"error": "Agent not found"}, status=status.HTTP_404_NOT_FOUND)
+    """✅ Approve an agent with debugging"""
+    print("\n🟢 [DEBUG] Approve Agent Endpoint Hit")
+    print("👉 Incoming ID:", id)
+    print("👉 Headers:", dict(request.headers))
+    print("👉 Authenticated user:", request.user)
+    print("👉 Method:", request.method)
+
+    try:
+        agent = AgentMember.objects.get(agent_id=id)
+        print("✅ Agent found:", agent.agent_id, agent.first_name)
+
+        agent.approval_status = "Approved"
+        agent.save()
+
+        print("🟢 Agent approval status updated successfully")
+
+        return Response(
+            {"message": f"Agent {agent.first_name} approved successfully"},
+            status=status.HTTP_200_OK
+        )
+    except AgentMember.DoesNotExist:
+        print("❌ ERROR: Agent not found for ID:", id)
+        return Response({"error": "Agent not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        print("🚨 Unexpected error:", str(e))
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 @permission_classes([AllowAny])
 @api_view(['POST'])
 def suspend_agent(request, id):
-        """🚫 Suspend an agent"""
-        try:
-            agent = AgentMember.objects.get(agent_id=id)
-            agent.approval_status = "Suspended"
-            agent.save()
-            return Response({"message": f"Agent {agent.first_name} suspended successfully"}, status=status.HTTP_200_OK)
-        except AgentMember.DoesNotExist:
-            return Response({"error": "Agent not found"}, status=status.HTTP_404_NOT_FOUND)
+    """🚫 Suspend an agent with debugging"""
+    print("\n🟡 [DEBUG] Suspend Agent Endpoint Hit")
+    print("👉 Incoming ID:", id)
+    print("👉 Headers:", dict(request.headers))
+    print("👉 Authenticated user:", request.user)
+    print("👉 Method:", request.method)
+
+    try:
+        agent = AgentMember.objects.get(agent_id=id)
+        print("✅ Agent found:", agent.agent_id, agent.first_name)
+
+        agent.approval_status = "Suspended"
+        agent.save()
+
+        print("🟡 Agent approval status set to Suspended")
+
+        return Response(
+            {"message": f"Agent {agent.first_name} suspended successfully"},
+            status=status.HTTP_200_OK
+        )
+    except AgentMember.DoesNotExist:
+        print("❌ ERROR: Agent not found for ID:", id)
+        return Response({"error": "Agent not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        print("🚨 Unexpected error:", str(e))
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 @permission_classes([AllowAny])
 @api_view(['DELETE'])
 def delete_agent(request, id):
-        """🗑️ Delete an agent"""
-        try:
-            agent = AgentMember.objects.get(agent_id=id)
-            name = agent.first_name
-            agent.delete()
-            return Response({"message": f"Agent {name} deleted successfully"}, status=status.HTTP_200_OK)
-        except AgentMember.DoesNotExist:
-            return Response({"error": "Agent not found"}, status=status.HTTP_404_NOT_FOUND)
+    """🗑️ Delete an agent with debugging"""
+    print("\n🔴 [DEBUG] Delete Agent Endpoint Hit")
+    print("👉 Incoming ID:", id)
+    print("👉 Headers:", dict(request.headers))
+    print("👉 Authenticated user:", request.user)
+    print("👉 Method:", request.method)
+
+    try:
+        agent = AgentMember.objects.get(agent_id=id)
+        name = agent.first_name
+        agent.delete()
+        print(f"🗑️ Agent {name} deleted successfully")
+
+        return Response(
+            {"message": f"Agent {name} deleted successfully"},
+            status=status.HTTP_200_OK
+        )
+    except AgentMember.DoesNotExist:
+        print("❌ ERROR: Agent not found for ID:", id)
+        return Response({"error": "Agent not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        print("🚨 Unexpected error:", str(e))
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
