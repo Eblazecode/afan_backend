@@ -56,9 +56,9 @@ path(
     path('kyc/fetch/<path:membership_id>/', FarmerDetailView.as_view(), name='fetch_farmer'),
     path('kyc/update/<path:membership_id>/', FarmerDetailView.as_view(), name='update_farmer'),
 
-    path('approve_agent/<int:id>/', views.approve_agent, name='approve_agent'),
-    path('suspend_agent/<int:id>/', views.suspend_agent, name='suspend_agent'),
-    path('delete_agent/<int:id>/', views.delete_agent, name='delete_agent'),
+    path('approve_agent/<path:id>/', views.approve_agent, name='approve_agent'),
+    path('suspend_agent/<path:id>/', views.suspend_agent, name='suspend_agent'),
+    path('delete_agent/<path:id>/', views.delete_agent, name='delete_agent'),
 
 ]
 
