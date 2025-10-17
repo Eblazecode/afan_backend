@@ -1511,34 +1511,36 @@ class FarmerDetailView(View):
         return JsonResponse({"message": "Farmer record updated successfully!"}, status=200)
 
 
-
+@permission_classes([AllowAny])
 @api_view(['POST'])
 def approve_agent(request, id):
         """✅ Approve an agent"""
         try:
-            agent = AgentMember.objects.get(id=id)
-            agent.status = "Approved"
+            agent = AgentMember.objects.get(agent_id=id)
+            agent.approval_status  = "Approved"
             agent.save()
             return Response({"message": f"Agent {agent.first_name} approved successfully"}, status=status.HTTP_200_OK)
         except AgentMember.DoesNotExist:
             return Response({"error": "Agent not found"}, status=status.HTTP_404_NOT_FOUND)
 
+@permission_classes([AllowAny])
 @api_view(['POST'])
 def suspend_agent(request, id):
         """🚫 Suspend an agent"""
         try:
-            agent = AgentMember.objects.get(id=id)
-            agent.status = "Suspended"
+            agent = AgentMember.objects.get(agent_id=id)
+            agent.approval_status = "Suspended"
             agent.save()
             return Response({"message": f"Agent {agent.first_name} suspended successfully"}, status=status.HTTP_200_OK)
         except AgentMember.DoesNotExist:
             return Response({"error": "Agent not found"}, status=status.HTTP_404_NOT_FOUND)
 
+@permission_classes([AllowAny])
 @api_view(['DELETE'])
 def delete_agent(request, id):
         """🗑️ Delete an agent"""
         try:
-            agent = AgentMember.objects.get(id=id)
+            agent = AgentMember.objects.get(agent_id=id)
             name = agent.first_name
             agent.delete()
             return Response({"message": f"Agent {name} deleted successfully"}, status=status.HTTP_200_OK)
