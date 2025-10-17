@@ -275,6 +275,9 @@ def login_agent(request):
     except AgentMember.DoesNotExist:
         return Response({'error': 'Invalid email or password'}, status=401)
 
+    # check agent if Suspended or approved
+
+
     if not check_password(password, agent.password):
         return Response({'error': 'Invalid email or password'}, status=401)
 
@@ -292,6 +295,7 @@ def login_agent(request):
             "kycStatus": agent.kycStatus,
             "paymentStatus": agent.paymentStatus,
             "transaction_id": agent.transaction_id,
+            "approval_status": agent.approval_status,
         },
         "refresh": str(refresh),
         "access": str(refresh.access_token),
