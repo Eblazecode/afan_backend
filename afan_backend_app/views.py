@@ -261,6 +261,8 @@ from django.contrib.auth.hashers import check_password
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import AgentMember
 
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_agent(request):
@@ -268,19 +270,27 @@ def login_agent(request):
     password = request.data.get('password')
 
     if not email or not password:
-        return Response({'error': 'Email and password are required'}, status=400)
+        return Response({'error': 'Email and password are required'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        agent = AgentMember.objects.get(email=email)  # query by email
+        agent = AgentMember.objects.get(email=email)
     except AgentMember.DoesNotExist:
-        return Response({'error': 'Invalid email or password'}, status=401)
+        return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
 
-    # check agent if Suspended or approved
-
-
+    # 🔐 Check password
     if not check_password(password, agent.password):
-        return Response({'error': 'Invalid email or password'}, status=401)
+        return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
 
+    # 🛑 Check approval status
+    if agent.approval_status == "Suspended":
+        return Response({'error': 'Your account has been suspended. Contact support.'},
+                        status=status.HTTP_403_FORBIDDEN)
+
+    if agent.approval_status == "Pending":
+        return Response({'error': 'Your account is still pending approval.'},
+                        status=status.HTTP_403_FORBIDDEN)
+
+    # ✅ Generate token only if approved
     refresh = RefreshToken.for_user(agent)
 
     return Response({
@@ -288,7 +298,7 @@ def login_agent(request):
             "id": agent.id,
             "name": f"{agent.first_name} {agent.last_name}".strip(),
             "email": agent.email,
-            "agent_id": agent.agent_id,  # keep it for reference
+            "agent_id": agent.agent_id,
             "state": agent.state,
             "lga": agent.lga,
             "role": "agent",
@@ -299,7 +309,8 @@ def login_agent(request):
         },
         "refresh": str(refresh),
         "access": str(refresh.access_token),
-    }, status=200)
+    }, status=status.HTTP_200_OK)
+
 
 
 
