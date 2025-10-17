@@ -193,6 +193,10 @@ def register_agent(request):
     if AgentMember.objects.filter(nin=nin).exists():
         return Response({'error': 'NIN already exists'}, status=400)
 
+    # check if agent is status is suspended or pending
+    if AgentMember.objects.filter(nin=nin, approval_status__in=['suspended', 'pending']).exists():
+        return Response({'error': f'Agent account is {AgentMember.objects.get(email=email).approval_status}. Please contact support.'}, status=400)
+
     # split full name into first/last
     parts = name.strip().split(" ", 1)
     first_name = parts[0]
@@ -281,14 +285,8 @@ def login_agent(request):
     if not check_password(password, agent.password):
         return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
 
-    # 🛑 Check approval status
-    if agent.approval_status == "Suspended":
-        return Response({'error': 'Your account has been suspended. Contact support.'},
-                        status=status.HTTP_403_FORBIDDEN)
 
-    if agent.approval_status == "Pending":
-        return Response({'error': 'Your account is still pending approval.'},
-                        status=status.HTTP_403_FORBIDDEN)
+
 
     # ✅ Generate token only if approved
     refresh = RefreshToken.for_user(agent)
