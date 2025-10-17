@@ -1514,8 +1514,9 @@ class FarmerDetailView(View):
 
 
 
-@permission_classes([AllowAny])
+
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def approve_agent(request, id):
     """✅ Approve an agent with debugging"""
     print("\n🟢 [DEBUG] Approve Agent Endpoint Hit")
@@ -1545,8 +1546,9 @@ def approve_agent(request, id):
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@permission_classes([AllowAny])
+
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def suspend_agent(request, id):
     """🚫 Suspend an agent with debugging"""
     print("\n🟡 [DEBUG] Suspend Agent Endpoint Hit")
@@ -1576,8 +1578,9 @@ def suspend_agent(request, id):
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@permission_classes([AllowAny])
+
 @api_view(['DELETE'])
+@permission_classes([AllowAny])
 def delete_agent(request, id):
     """🗑️ Delete an agent with debugging"""
     print("\n🔴 [DEBUG] Delete Agent Endpoint Hit")
