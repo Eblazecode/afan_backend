@@ -1315,6 +1315,7 @@ def admin_fetch_all_farmers(request):
             "ward":f.ward,
             "passportPhoto": passport_url,
             "submissiondate": f.submittedAt,
+            "agent_id": f.agent_id,
         })
 
     return Response({

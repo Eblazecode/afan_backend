@@ -112,12 +112,13 @@ class AgentMember(models.Model):
 
 
     def save(self, *args, **kwargs):
-        # Auto-generate membership ID if not set
-        if not self.agent_id:
-            self.membership_id = f"AFANAGT-{uuid.uuid4().hex[:8].upper()}"
+        # Auto-generate agent ID
 
-        if not self.id and self.password:  # hash password on creation
+
+        # Hash password if it’s not already hashed
+        if self.password and not self.password.startswith('pbkdf2_'):
             self.password = make_password(self.password)
+
         super().save(*args, **kwargs)
 
     def __str__(self):
