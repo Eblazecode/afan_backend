@@ -1,3 +1,4 @@
+import secrets
 import uuid
 from datetime import datetime, timezone, timedelta
 
@@ -104,6 +105,17 @@ class AgentMember(models.Model):
     # Required fields for AbstractBaseUser
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+
+    reset_token = models.CharField(max_length=100, null=True, blank=True)
+    reset_token_expiry = models.DateTimeField(null=True, blank=True)
+
+    def set_reset_token(self):
+        """Generate and store a unique password reset token"""
+        token = secrets.token_urlsafe(32)
+        self.reset_token = token
+        self.reset_token_expiry = timezone.now() + timedelta(hours=1)
+        self.save(update_fields=['reset_token', 'reset_token_expiry'])
+        return token
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []

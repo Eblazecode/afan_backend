@@ -1006,6 +1006,16 @@ def reset_password(request, user_id, token):
 
 
 
+from django.core.mail import send_mail
+from django.conf import settings
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from django.utils import timezone
+from django.contrib.auth.hashers import make_password
+from .models import AgentMember
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def agent_forgot_password(request):
@@ -1014,27 +1024,24 @@ def agent_forgot_password(request):
         return Response({'error': 'Email is required'}, status=400)
 
     try:
-        # check member table or agent member table
-
-
         agent = AgentMember.objects.get(email=email)
-    except Member.DoesNotExist:
-        return Response({'error': 'No account with this email'}, status=404)
+    except AgentMember.DoesNotExist:
+        return Response({'error': 'No account found with this email'}, status=404)
 
     token = agent.set_reset_token()
-    # get agent name
-    agent_name = f"{agent.first_name} {agent.last_name}"
-    agent_idnum = agent.id
+    agent_name = f"{agent.first_name} {agent.last_name}".strip()
     reset_link = f"https://www.afannigeria.com/agentreset-password/{agent.id}/{token}/"
 
     send_mail(
-        'Reset Your AFAN AGENT Password',
-        f'Hi,{agent_name} with {agent_idnum}, Click here to reset your password: {reset_link}',
+        'Reset Your AFAN Agent Password',
+        f'Hi {agent_name},\n\nClick the link below to reset your password:\n{reset_link}\n\nThis link will expire in 1 hour.',
         settings.DEFAULT_FROM_EMAIL,
         [email],
         fail_silently=False,
     )
-    return Response({'message': 'Password reset link sent to your email'}, status=200)
+
+    return Response({'message': 'Password reset link sent to your email.'}, status=200)
+
 
 
 from django.contrib.auth.hashers import make_password
