@@ -1025,7 +1025,7 @@ def agent_forgot_password(request):
     # get agent name
     agent_name = f"{agent.first_name} {agent.last_name}"
     agent_idnum = agent.id
-    reset_link = f"https://www.afannigeria.com/reset-password/{agent.id}/{token}/"
+    reset_link = f"https://www.afannigeria.com/agentreset-password/{agent.id}/{token}/"
 
     send_mail(
         'Reset Your AFAN AGENT Password',
