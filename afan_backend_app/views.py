@@ -171,42 +171,65 @@ import re
 from .models import AgentMember, Member
 
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.db import transaction, IntegrityError
+from django.utils import timezone
+import re
+from .models import AgentMember, Member  # Adjust if in same or different file
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_agent(request):
     data = request.data
-    print("Received data:", data)  # Debugging
+    print("\n=== AGENT REGISTRATION DEBUG LOG ===")
+    print("Received data:", data)
 
-    required_fields = ['name', 'email', 'password', 'state', 'lga', 'ward', 'nin', 'phoneNumber', 'DOB', 'education', 'gender']
-    if not all(data.get(field) for field in required_fields):
-        return Response({'error': 'Missing required fields'}, status=400)
+    required_fields = [
+        'name', 'email', 'password', 'state', 'lga', 'ward',
+        'nin', 'phoneNumber', 'DOB', 'education', 'gender'
+    ]
+    missing = [f for f in required_fields if not data.get(f)]
+    if missing:
+        print("Missing fields:", missing)
+        return Response({'error': f'Missing fields: {", ".join(missing)}'}, status=400)
 
-    name = data.get('name').strip()
-    email = data.get('email').strip().lower()
+    name = data.get('name', '').strip()
+    email = data.get('email', '').strip().lower()
     password = data.get('password')
-    state = data.get('state').strip()
-    lga = data.get('lga').strip()
-    ward = data.get('ward').strip()
-    nin = data.get('nin').strip()
-    phoneNumber = data.get('phoneNumber').strip()
+    state = data.get('state', '').strip()
+    lga = data.get('lga', '').strip()
+    ward = data.get('ward', '').strip()
+    nin = data.get('nin', '').strip()
+    phoneNumber = data.get('phoneNumber', '').strip()
     DOB = data.get('DOB')
-    education = data.get('education').strip()
-    gender = data.get('gender').strip()
+    education = data.get('education', '').strip()
+    gender = data.get('gender', '').strip()
 
-    # Check if email, phone, or NIN already exist
-    if Member.objects.filter(email=email).exists():
+    # Validation for uniqueness
+    if AgentMember.objects.filter(email=email).exists():
+        print("❌ Email already exists:", email)
         return Response({'error': 'User email already exists'}, status=400)
 
     if AgentMember.objects.filter(phoneNumber=phoneNumber).exists():
+        print("❌ Phone number already exists:", phoneNumber)
         return Response({'error': 'Phone number already exists'}, status=400)
 
     if AgentMember.objects.filter(nin=nin).exists():
+        print("❌ NIN already exists:", nin)
         return Response({'error': 'NIN already exists'}, status=400)
 
     # Check suspended or pending agents
-    existing_agent = AgentMember.objects.filter(nin=nin, approval_status__in=['suspended', 'pending']).first()
+    existing_agent = AgentMember.objects.filter(
+        nin=nin, approval_status__in=['suspended', 'pending']
+    ).first()
     if existing_agent:
-        return Response({'error': f'Agent account is {existing_agent.approval_status}. Please contact support.'}, status=400)
+        print(f"⚠️ Existing agent found with status: {existing_agent.approval_status}")
+        return Response({
+            'error': f'Agent account is currently {existing_agent.approval_status}. Please contact support.'
+        }, status=400)
 
     # Split full name
     parts = name.split(" ", 1)
@@ -217,7 +240,7 @@ def register_agent(request):
     cleaned_state = re.sub(r'\W+', '', str(state)).upper()[:3].ljust(3, 'X')
     cleaned_lga = re.sub(r'\W+', '', str(lga)).upper()[:3].ljust(3, 'X')
 
-    # Generate unique agent_id safely using transaction
+    # Generate unique agent ID safely
     for attempt in range(5):
         try:
             with transaction.atomic():
@@ -225,34 +248,43 @@ def register_agent(request):
                 unique_code = str(count).zfill(5)
                 agent_id = f"{prefix}/{cleaned_state}/{cleaned_lga}/{unique_code}"
 
-                # Ensure unique ID
                 if AgentMember.objects.filter(agent_id=agent_id).exists():
+                    print(f"⚠️ Agent ID conflict, retrying: {agent_id}")
                     continue
 
+                # ✅ Here, set the default approval_status to 'pending' only once.
                 agentmember = AgentMember.objects.create(
                     email=email,
                     first_name=first_name,
                     last_name=last_name,
                     state=state,
                     lga=lga,
-                    password=password,
-                    agent_id=agent_id,
                     ward=ward,
                     nin=nin,
                     phoneNumber=phoneNumber,
                     DOB=DOB,
                     gender=gender,
                     education=education,
+                    password=password,  # auto-hashed in model.save()
+                    agent_id=agent_id,
+                    approval_status="pending",  # default for new registrations
+                    kycStatus="not_submitted",
+                    paymentStatus="not_paid",
                 )
+
+                print(f"✅ Agent created successfully: {agent_id}")
                 break
-        except IntegrityError:
+        except IntegrityError as e:
+            print(f"⚠️ IntegrityError attempt {attempt+1}: {e}")
             continue
     else:
+        print("❌ Failed to generate unique Agent ID")
         return Response({'error': 'Could not generate unique Agent ID, please try again.'}, status=500)
 
-    # JWT Token
+    # JWT Token creation
     refresh = RefreshToken.for_user(agentmember)
 
+    print("🎉 Registration successful for:", email)
     return Response({
         "message": "Agent registered successfully!",
         "user": {
@@ -271,10 +303,12 @@ def register_agent(request):
             "registration_date": agentmember.registration_date,
             "kycStatus": agentmember.kycStatus,
             "paymentStatus": agentmember.paymentStatus,
+            "approval_status": agentmember.approval_status,
         },
         "refresh": str(refresh),
         "access": str(refresh.access_token),
     }, status=201)
+
 
 
 
