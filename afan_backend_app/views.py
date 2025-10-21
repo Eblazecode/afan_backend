@@ -160,80 +160,101 @@ def register_member(request):
     }, status=201)
 
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.db import transaction
+from django.db.utils import IntegrityError
+import re
+
+from .models import AgentMember, Member
+
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_agent(request):
     data = request.data
-    name = data.get('name')
-    email = data.get('email')
+    print("Received data:", data)  # Debugging
+
+    required_fields = ['name', 'email', 'password', 'state', 'lga', 'ward', 'nin', 'phoneNumber', 'DOB', 'education', 'gender']
+    if not all(data.get(field) for field in required_fields):
+        return Response({'error': 'Missing required fields'}, status=400)
+
+    name = data.get('name').strip()
+    email = data.get('email').strip().lower()
     password = data.get('password')
-    state = data.get('state')
-    lga = data.get('lga')
-    ward = data.get('ward')
-    nin = data.get('nin')
-    phoneNumber = data.get('phoneNumber')
+    state = data.get('state').strip()
+    lga = data.get('lga').strip()
+    ward = data.get('ward').strip()
+    nin = data.get('nin').strip()
+    phoneNumber = data.get('phoneNumber').strip()
     DOB = data.get('DOB')
-    education = data.get('education')
-    gender = data.get('gender')
+    education = data.get('education').strip()
+    gender = data.get('gender').strip()
 
-
-    print("Received data:", data)  # Debugging line to check received data
-    if not all([name, email, password, state, lga, ward, nin, phoneNumber, DOB, education, gender]):
-        return Response({'error': 'Missing fields'}, status=400)
-
-    # if  email exists
+    # Check if email, phone, or NIN already exist
     if Member.objects.filter(email=email).exists():
-        return Response({'error': 'user email already already exists'}, status=400)
+        return Response({'error': 'User email already exists'}, status=400)
 
-    # if phoneNumber exists
     if AgentMember.objects.filter(phoneNumber=phoneNumber).exists():
         return Response({'error': 'Phone number already exists'}, status=400)
 
     if AgentMember.objects.filter(nin=nin).exists():
         return Response({'error': 'NIN already exists'}, status=400)
 
-    # check if agent is status is suspended or pending
-    if AgentMember.objects.filter(nin=nin, approval_status__in=['suspended', 'pending']).exists():
-        return Response({'error': f'Agent account is {AgentMember.objects.get(email=email).approval_status}. Please contact support.'}, status=400)
+    # Check suspended or pending agents
+    existing_agent = AgentMember.objects.filter(nin=nin, approval_status__in=['suspended', 'pending']).first()
+    if existing_agent:
+        return Response({'error': f'Agent account is {existing_agent.approval_status}. Please contact support.'}, status=400)
 
-    # split full name into first/last
-    parts = name.strip().split(" ", 1)
+    # Split full name
+    parts = name.split(" ", 1)
     first_name = parts[0]
     last_name = parts[1] if len(parts) > 1 else ""
 
-    import re
     prefix = "AFAN/AGT"
     cleaned_state = re.sub(r'\W+', '', str(state)).upper()[:3].ljust(3, 'X')
     cleaned_lga = re.sub(r'\W+', '', str(lga)).upper()[:3].ljust(3, 'X')
-    count = Member.objects.filter(state=state, lga=lga).count() + 1
-    unique_code = str(count).zfill(5)
 
-    gen_membership_id = f"{prefix}/{cleaned_state}/{cleaned_lga}/{unique_code}"
+    # Generate unique agent_id safely using transaction
+    for attempt in range(5):
+        try:
+            with transaction.atomic():
+                count = AgentMember.objects.filter(state=state, lga=lga).count() + 1
+                unique_code = str(count).zfill(5)
+                agent_id = f"{prefix}/{cleaned_state}/{cleaned_lga}/{unique_code}"
 
-    # validate format
-    if not re.match(r"^AFAN/AGT/[A-Z]{3}/[A-Z]{3}/\d{5}$", gen_membership_id):
-        raise ValueError("Invalid membership ID format")
+                # Ensure unique ID
+                if AgentMember.objects.filter(agent_id=agent_id).exists():
+                    continue
 
-    agentmember = AgentMember.objects.create(
-        email=email,
-        first_name=first_name,
-        last_name=last_name,
-        state=state,
-        lga=lga,
-        password=password,
-        agent_id= gen_membership_id, # your custom function
-        ward=ward,
-        nin=nin,
-        phoneNumber = phoneNumber,
-        DOB=DOB,
-        gender=gender,
-        education=education,
+                agentmember = AgentMember.objects.create(
+                    email=email,
+                    first_name=first_name,
+                    last_name=last_name,
+                    state=state,
+                    lga=lga,
+                    password=password,
+                    agent_id=agent_id,
+                    ward=ward,
+                    nin=nin,
+                    phoneNumber=phoneNumber,
+                    DOB=DOB,
+                    gender=gender,
+                    education=education,
+                )
+                break
+        except IntegrityError:
+            continue
+    else:
+        return Response({'error': 'Could not generate unique Agent ID, please try again.'}, status=500)
 
-    )
-
+    # JWT Token
     refresh = RefreshToken.for_user(agentmember)
+
     return Response({
+        "message": "Agent registered successfully!",
         "user": {
             "id": agentmember.id,
             "name": f"{agentmember.first_name} {agentmember.last_name}".strip(),
@@ -246,11 +267,10 @@ def register_agent(request):
             "nin": agentmember.nin,
             "DOB": agentmember.DOB,
             "education": agentmember.education,
-            "gender":agentmember.gender,
+            "gender": agentmember.gender,
             "registration_date": agentmember.registration_date,
             "kycStatus": agentmember.kycStatus,
-            "paymentStatus":agentmember.paymentStatus,
-
+            "paymentStatus": agentmember.paymentStatus,
         },
         "refresh": str(refresh),
         "access": str(refresh.access_token),
@@ -486,9 +506,7 @@ from .models import KYCSubmission
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser
-from rest_framework.response import Response
-from rest_framework import status
-from .models import KYCSubmission
+
 
 class KYCSubmissionView(APIView):
     permission_classes = [AllowAny]  # 👈 anyone can access
@@ -824,7 +842,7 @@ def verify_payment(request, reference):
                             "name": f"{member.first_name} {member.last_name}",
                             "email": member.email,
                             "membership_id": member.membership_id,
-                            "farmType": kyc.farmType,
+                            "farmType": member.farmType,
 
                         }
                     }
@@ -983,6 +1001,64 @@ def reset_password(request, user_id, token):
     member.reset_token = None
     member.reset_token_expiry = None
     member.save()
+
+    return Response({'message': 'Password reset successful'}, status=200)
+
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def agent_forgot_password(request):
+    email = request.data.get('email')
+    if not email:
+        return Response({'error': 'Email is required'}, status=400)
+
+    try:
+        # check member table or agent member table
+
+
+        agent = AgentMember.objects.get(email=email)
+    except Member.DoesNotExist:
+        return Response({'error': 'No account with this email'}, status=404)
+
+    token = agent.set_reset_token()
+    # get agent name
+    agent_name = f"{agent.first_name} {agent.last_name}"
+    agent_idnum = agent.id
+    reset_link = f"https://www.afannigeria.com/reset-password/{agent.id}/{token}/"
+
+    send_mail(
+        'Reset Your AFAN AGENT Password',
+        f'Hi,{agent_name} with {agent_idnum}, Click here to reset your password: {reset_link}',
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        fail_silently=False,
+    )
+    return Response({'message': 'Password reset link sent to your email'}, status=200)
+
+
+from django.contrib.auth.hashers import make_password
+from django.utils import timezone
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def agent_reset_password(request, user_id, token):
+    password = request.data.get('password')
+    if not password:
+        return Response({'error': 'Password is required'}, status=400)
+
+    try:
+        agent= AgentMember.objects.get(id=user_id, reset_token=token)
+    except AgentMember.DoesNotExist:
+        return Response({'error': 'Invalid token or user'}, status=404)
+
+    if not agent.reset_token_expiry or agent.reset_token_expiry < timezone.now():
+        return Response({'error': 'Token expired'}, status=400)
+
+    agent.password = make_password(password)
+    agent.reset_token = None
+    agent.reset_token_expiry = None
+    agent.save()
 
     return Response({'message': 'Password reset successful'}, status=200)
 

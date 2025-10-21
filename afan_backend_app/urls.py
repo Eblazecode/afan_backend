@@ -60,5 +60,10 @@ path(
     path('suspend_agent/<path:id>/', views.suspend_agent, name='suspend_agent'),
     path('delete_agent/<path:id>/', views.delete_agent, name='delete_agent'),
 
+
+    path('agentforgot_password/', views.agent_forgot_password, name='forgot-password'),
+    path('agentreset_password/<int:user_id>/<str:token>/', views.agent_reset_password, name='reset-password'),
+
+
 ]
 
