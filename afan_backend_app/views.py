@@ -180,10 +180,20 @@ from django.utils import timezone
 import re
 from .models import AgentMember, Member  # Adjust if in same or different file
 
+import random
+import time
+import re
+from django.db import transaction, IntegrityError
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
+from .models import AgentMember
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_agent(request):
-    import datetime
     data = request.data
     print("\n=== AGENT REGISTRATION DEBUG LOG ===")
     print("Received data:", data)
@@ -241,77 +251,53 @@ def register_agent(request):
     cleaned_state = re.sub(r'\W+', '', str(state)).upper()[:3].ljust(3, 'X')
     cleaned_lga = re.sub(r'\W+', '', str(lga)).upper()[:3].ljust(3, 'X')
 
-    # ✅ Robust unique Agent ID generator with timestamp fallback
-    with transaction.atomic():
+    # Generate unique agent ID safely
+    for attempt in range(5):
         try:
-            last_agent = (
-                AgentMember.objects
-                .filter(state=state, lga=lga)
-                .order_by('-registration_date')
-                .first()
-            )
-            next_number = 1
-            if last_agent and last_agent.agent_id:
-                try:
-                    last_code = int(last_agent.agent_id.split('/')[-1])
-                    next_number = last_code + 1
-                except (IndexError, ValueError):
-                    next_number = 1
+            with transaction.atomic():
+                count = AgentMember.objects.filter(state=state, lga=lga).count() + 1
 
-            unique_code = str(next_number).zfill(5)
-            agent_id = f"{prefix}/{cleaned_state}/{cleaned_lga}/{unique_code}"
+                # Step 1: Try generating 5-digit random number (no dash)
+                random_part = str(random.randint(10000, 99999))
 
-            # Fallback: if ID already exists, use timestamp-based ID
-            if AgentMember.objects.filter(agent_id=agent_id).exists():
-                timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-                agent_id = f"{prefix}/{cleaned_state}/{cleaned_lga}/{timestamp}"
-                print(f"⚠️ ID conflict, fallback to timestamp ID: {agent_id}")
+                # Step 2: Use timestamp fallback (5 unique digits)
+                if not random_part or len(random_part) != 5:
+                    random_part = str(int(time.time()))[-5:]
 
-            # Create the agent record
-            agentmember = AgentMember.objects.create(
-                email=email,
-                first_name=first_name,
-                last_name=last_name,
-                state=state,
-                lga=lga,
-                ward=ward,
-                nin=nin,
-                phoneNumber=phoneNumber,
-                DOB=DOB,
-                gender=gender,
-                education=education,
-                password=password,  # hashed by model save()
-                agent_id=agent_id,
-                approval_status="pending",
-                kycStatus="not_submitted",
-                paymentStatus="not_paid",
-            )
+                agent_id = f"{prefix}/{cleaned_state}/{cleaned_lga}/{random_part}"
 
+                if AgentMember.objects.filter(agent_id=agent_id).exists():
+                    print(f"⚠️ Agent ID conflict, retrying: {agent_id}")
+                    continue
+
+                # ✅ Create new agent record
+                agentmember = AgentMember.objects.create(
+                    email=email,
+                    first_name=first_name,
+                    last_name=last_name,
+                    state=state,
+                    lga=lga,
+                    ward=ward,
+                    nin=nin,
+                    phoneNumber=phoneNumber,
+                    DOB=DOB,
+                    gender=gender,
+                    education=education,
+                    password=password,  # auto-hashed in model.save()
+                    agent_id=agent_id,
+                    approval_status="pending",  # default for new registrations
+                    kycStatus="not_submitted",
+                    paymentStatus="not_paid",
+                )
+
+                print(f"✅ Agent created successfully: {agent_id}")
+                break
         except IntegrityError as e:
-            print(f"❌ IntegrityError during registration: {e}")
-            timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-            agent_id = f"{prefix}/{cleaned_state}/{cleaned_lga}/{timestamp}"
-            agentmember = AgentMember.objects.create(
-                email=email,
-                first_name=first_name,
-                last_name=last_name,
-                state=state,
-                lga=lga,
-                ward=ward,
-                nin=nin,
-                phoneNumber=phoneNumber,
-                DOB=DOB,
-                gender=gender,
-                education=education,
-                password=password,
-                agent_id=agent_id,
-                approval_status="pending",
-                kycStatus="not_submitted",
-                paymentStatus="not_paid",
-            )
-            print(f"🕒 Used timestamp fallback after IntegrityError: {agent_id}")
-
-    print(f"✅ Agent created successfully: {agent_id}")
+            print(f"⚠️ IntegrityError attempt {attempt+1}: {e}")
+            continue
+    else:
+        print("❌ Failed to generate unique Agent ID")
+        return Response({'error': 'Could not generate unique Agent ID, please try again.'}, status=500)
 
     # JWT Token creation
     refresh = RefreshToken.for_user(agentmember)
@@ -340,7 +326,6 @@ def register_agent(request):
         "refresh": str(refresh),
         "access": str(refresh.access_token),
     }, status=201)
-
 
 
 
@@ -613,6 +598,9 @@ class KYCSubmissionView(APIView):
             farm_location = data.get('farmLocation')
             passport_photo = files.get('passportPhoto')
             membership_id = data.get('membership_id')
+            farmcoordinates = data.get('farmCoordinates')
+            farmAssociation = data.get('farmAssociation')
+            farmDocument = farm_location.get('farmDocument')
 
             # Extra check for membership_id being readonly
             if not membership_id:
@@ -627,6 +615,14 @@ class KYCSubmissionView(APIView):
                 file_name = f"{membership_id}_passport.{ext}"
                 passport_url = upload_passport(passport_photo, file_name)
 
+                farmDocument_url = None
+            if farmDocument:
+                ext = farmDocument.name.split('.')[-1]
+                file_name = f"{membership_id}_farmdoc.{ext}"
+                farmDocument_url = upload_passport(farmDocument, file_name)
+            # Debug uploaded URLs
+            print("Uploaded passport URL:", passport_url)
+            print("Uploaded farm document URL:", farmDocument_url)
             # Create record
             kyc = KYCSubmission.objects.create(
                 firstName=first_name,
@@ -651,6 +647,9 @@ class KYCSubmissionView(APIView):
                 passportPhoto=passport_url if passport_url else None,
                 membership_id=membership_id,
                 kycStatus="approved",  # default status
+                farmCoordinates=farmcoordinates,
+                farmAssociation=farmAssociation,
+                farmDocument=farmDocument_url if farmDocument_url else None,
             )
             # update member record where membership_id matches
             member = Member.objects.get(membership_id=membership_id)

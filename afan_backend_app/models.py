@@ -185,6 +185,9 @@ class KYCSubmission(models.Model):
     kycStatus = models.CharField(max_length=20, default='not_submitted')  # KYC status
     paymentStatus = models.CharField(max_length=20, default='not_paid')  # Payment status
     transaction_id = models.CharField(max_length=100, blank=True, null=True)
+    farmCoordinates = models.TextField(blank=True, null=True)
+    farmAssociation = models.TextField(blank=True, null=True)
+    farmDocument = models.TextField(blank=True, null=True)
 
     def __str__(self):
         return f"{self.firstName} {self.lastName} - {self.phoneNumber}"
