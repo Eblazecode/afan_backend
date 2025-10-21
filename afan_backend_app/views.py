@@ -600,7 +600,7 @@ class KYCSubmissionView(APIView):
             membership_id = data.get('membership_id')
             farmcoordinates = data.get('farmCoordinates')
             farmAssociation = data.get('farmAssociation')
-            farmDocument = farm_location.get('farmDocument')
+            farmDocument = farm_location.get('idDocument')
 
             # Extra check for membership_id being readonly
             if not membership_id:
