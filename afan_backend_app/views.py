@@ -588,7 +588,6 @@ from rest_framework.permissions import AllowAny
 from django.core.exceptions import ObjectDoesNotExist
 
 from .models import KYCSubmission, Member
-from .supabase_utils import upload_passport  # make sure this is your existing function
 
 
 class KYCSubmissionView(APIView):
