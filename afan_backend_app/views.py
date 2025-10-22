@@ -580,8 +580,19 @@ from rest_framework.permissions import AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser
 
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.permissions import AllowAny
+from django.core.exceptions import ObjectDoesNotExist
+
+from .models import KYCSubmission, Member
+from .supabase_utils import upload_passport  # make sure this is your existing function
+
+
 class KYCSubmissionView(APIView):
-    permission_classes = [AllowAny]  # 👈 anyone can access
+    permission_classes = [AllowAny]
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request, *args, **kwargs):
@@ -589,71 +600,66 @@ class KYCSubmissionView(APIView):
             data = request.data
             files = request.FILES
 
-            # Debugging received payloads
+            # ===== DEBUG LOGS =====
             print("====== DEBUG START ======")
             print("Raw request data:", data)
             print("Raw request files:", files)
-            print("Membership ID received:", data.get('membership_id'))
-            print("Passport photo received:", files.get('passportPhoto'))
+            print("Membership ID received:", data.get("membership_id"))
+            print("Passport photo received:", files.get("passportPhoto"))
             print("====== DEBUG END ======")
 
-            # Extract fields
-            first_name = data.get('firstName')
-            last_name = data.get('lastName')
-            phone_number = data.get('phoneNumber')
-            gender = data.get('gender')
-            DOB = data.get('DOB')
-            nin = data.get('nin')
-            address = data.get('address')
-            state = data.get('state')
-            lga = data.get('lga')
-            farmingSeason = data.get('farmingSeason')
-            farmingCommunity = data.get('farmingCommunity')
-            ward = data.get('ward')
-            education = data.get('education')
-            secondary_commodity = data.get('secondaryCommodity')
-            farm_type = data.get('farmType')
-            farm_size = data.get('farmSize')
-            years_of_experience = data.get('yearsOfExperience')
-            primary_commodity = data.get('primaryCommodity')
-            farm_location = data.get('farmLocation')
-            passport_photo = files.get('passportPhoto')
-            membership_id = data.get('membership_id')
-            # farmcoordinates = data.get('farmCoordinates')
-            # farmAssociation = data.get('farmAssociation')
-            # farmDocument = farm_location.get('idDocument')
-
-            # Extra check for membership_id being readonly
+            # ✅ Require membership ID — no fallback
+            membership_id = data.get("membership_id")
             if not membership_id:
-                print("⚠️ Membership ID is missing from request!")
-            else:
-                print("✅ Membership ID included:", membership_id)
+                return Response(
+                    {"error": "Membership ID is required."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
-                # ✅ Upload passport photo to Supabase if provided
-                passport_url = None
+            # Extract basic fields
+            first_name = data.get("firstName")
+            last_name = data.get("lastName")
+            phone_number = data.get("phoneNumber")
+            gender = data.get("gender")
+            DOB = data.get("DOB")
+            nin = data.get("nin")
+            address = data.get("address")
+            state = data.get("state")
+            lga = data.get("lga")
+            farmingSeason = data.get("farmingSeason")
+            farmingCommunity = data.get("farmingCommunity")
+            ward = data.get("ward")
+            education = data.get("education")
+            secondary_commodity = data.get("secondaryCommodity")
+            farm_type = data.get("farmType")
+            farm_size = data.get("farmSize")
+            years_of_experience = data.get("yearsOfExperience")
+            primary_commodity = data.get("primaryCommodity")
+            farm_location = data.get("farmLocation")
+
+            passport_photo = files.get("passportPhoto")
+
+            # ✅ Upload passport photo to Supabase (if provided)
+            passport_url = None
             if passport_photo:
                 ext = passport_photo.name.split('.')[-1]
                 file_name = f"{membership_id}_passport.{ext}"
                 passport_url = upload_passport(passport_photo, file_name)
-                # farmDocument_url = None
-                # if farmDocument:
-                #     ext = farmDocument.name.split('.')[-1]
-                #     file_name = f"{membership_id}_farmdoc.{ext}"
-                #     farmDocument_url = upload_passport(farmDocument, file_name)
-            # Debug uploaded URLs
-            print("Uploaded passport URL:", passport_url)
-           # print("Uploaded farm document URL:", farmDocument_url)
-            # Create record
+                print("✅ Uploaded passport URL:", passport_url)
+            else:
+                print("⚠️ No passport photo uploaded")
+
+            # ✅ Save KYC record
             kyc = KYCSubmission.objects.create(
                 firstName=first_name,
                 lastName=last_name,
-                gender = gender,
-                DOB = DOB,
-                farmingSeason = farmingSeason,
-                farmingCommunity = farmingCommunity,
-                ward = ward,
-                education = education,
-                secondaryCrops = secondary_commodity,
+                gender=gender,
+                DOB=DOB,
+                farmingSeason=farmingSeason,
+                farmingCommunity=farmingCommunity,
+                ward=ward,
+                education=education,
+                secondaryCrops=secondary_commodity,
                 phoneNumber=phone_number,
                 nin=nin,
                 address=address,
@@ -666,25 +672,35 @@ class KYCSubmissionView(APIView):
                 farmLocation=farm_location,
                 passportPhoto=passport_url if passport_url else None,
                 membership_id=membership_id,
-                kycStatus="approved",  # default status
-                # farmCoordinates=farmcoordinates,
-                # farmAssociation=farmAssociation,
-                # farmDocument=farmDocument_url if farmDocument_url else None,
+                kycStatus="approved",  # default approved for now
             )
-            # update member record where membership_id matches
-            member = Member.objects.get(membership_id=membership_id)
-            member.kycStatus = "approved"
-            member.save()
 
+            # ✅ Update related Member record (if exists)
+            try:
+                member = Member.objects.get(membership_id=membership_id)
+                member.kycStatus = "approved"
+                member.save()
+                print(f"✅ Member record updated for {membership_id}")
+            except ObjectDoesNotExist:
+                print(f"⚠️ No member found with membership_id: {membership_id}")
 
+            # ✅ Return success response
             return Response(
-                {"message": "Farmer record submission successful", "id": kyc.membership_id},
+                {
+                    "message": "Farmer record submission successful",
+                    "membership_id": kyc.membership_id,
+                    "passport_url": passport_url
+                },
                 status=status.HTTP_201_CREATED
             )
 
         except Exception as e:
             print("❌ ERROR in KYCSubmissionView:", str(e))
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
 
 # verify payment
 # views.py
