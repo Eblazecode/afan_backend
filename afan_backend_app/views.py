@@ -619,9 +619,9 @@ class KYCSubmissionView(APIView):
             farm_location = data.get('farmLocation')
             passport_photo = files.get('passportPhoto')
             membership_id = data.get('membership_id')
-            farmcoordinates = data.get('farmCoordinates')
-            farmAssociation = data.get('farmAssociation')
-            farmDocument = farm_location.get('idDocument')
+            # farmcoordinates = data.get('farmCoordinates')
+            # farmAssociation = data.get('farmAssociation')
+            # farmDocument = farm_location.get('idDocument')
 
             # Extra check for membership_id being readonly
             if not membership_id:
@@ -635,15 +635,14 @@ class KYCSubmissionView(APIView):
                 ext = passport_photo.name.split('.')[-1]
                 file_name = f"{membership_id}_passport.{ext}"
                 passport_url = upload_passport(passport_photo, file_name)
-
-                farmDocument_url = None
-            if farmDocument:
-                ext = farmDocument.name.split('.')[-1]
-                file_name = f"{membership_id}_farmdoc.{ext}"
-                farmDocument_url = upload_passport(farmDocument, file_name)
+                # farmDocument_url = None
+                # if farmDocument:
+                #     ext = farmDocument.name.split('.')[-1]
+                #     file_name = f"{membership_id}_farmdoc.{ext}"
+                #     farmDocument_url = upload_passport(farmDocument, file_name)
             # Debug uploaded URLs
             print("Uploaded passport URL:", passport_url)
-            print("Uploaded farm document URL:", farmDocument_url)
+           # print("Uploaded farm document URL:", farmDocument_url)
             # Create record
             kyc = KYCSubmission.objects.create(
                 firstName=first_name,
@@ -668,9 +667,9 @@ class KYCSubmissionView(APIView):
                 passportPhoto=passport_url if passport_url else None,
                 membership_id=membership_id,
                 kycStatus="approved",  # default status
-                farmCoordinates=farmcoordinates,
-                farmAssociation=farmAssociation,
-                farmDocument=farmDocument_url if farmDocument_url else None,
+                # farmCoordinates=farmcoordinates,
+                # farmAssociation=farmAssociation,
+                # farmDocument=farmDocument_url if farmDocument_url else None,
             )
             # update member record where membership_id matches
             member = Member.objects.get(membership_id=membership_id)
