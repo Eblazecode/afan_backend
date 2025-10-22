@@ -94,6 +94,15 @@ def gen_membership_id_func(state, lga):
     return gen_membership_id  # ✅ return the value
 
 
+import random
+import re
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
+from .models import Member
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register_member(request):
@@ -104,33 +113,44 @@ def register_member(request):
     state = data.get('state')
     lga = data.get('lga')
 
+    print("📥 Received registration data:", data)  # Debugging
 
-    print("Received data:", data)  # Debugging line to check received data
+    # Validate required fields
     if not all([name, email, password, state, lga]):
         return Response({'error': 'Missing fields'}, status=400)
 
-    # if  email exists
+    # Check if email already exists
     if Member.objects.filter(email=email).exists():
-        return Response({'error': 'user already already exists'}, status=400)
+        return Response({'error': 'User already exists'}, status=400)
 
-    # split full name into first/last
+    # Split full name into first and last name
     parts = name.strip().split(" ", 1)
     first_name = parts[0]
     last_name = parts[1] if len(parts) > 1 else ""
 
-    import re
+    # Clean state and LGA abbreviations
     prefix = "AFAN"
     cleaned_state = re.sub(r'\W+', '', str(state)).upper()[:3].ljust(3, 'X')
     cleaned_lga = re.sub(r'\W+', '', str(lga)).upper()[:3].ljust(3, 'X')
-    count = Member.objects.filter(state=state, lga=lga).count() + 1
-    unique_code = str(count).zfill(5)
 
-    gen_membership_id = f"{prefix}/{cleaned_state}/{cleaned_lga}/{unique_code}"
+    # Generate a unique random 5-digit number
+    def generate_unique_number():
+        """Generate a truly unique 5-digit number that doesn't already exist."""
+        while True:
+            random_number = str(random.randint(10000, 99999))
+            gen_membership_id = f"{prefix}/{cleaned_state}/{cleaned_lga}/{random_number}"
+            if not Member.objects.filter(membership_id=gen_membership_id).exists():
+                return gen_membership_id
 
-    # validate format
+    gen_membership_id = generate_unique_number()
+
+    # Validate membership ID format
     if not re.match(r"^AFAN/[A-Z]{3}/[A-Z]{3}/\d{5}$", gen_membership_id):
-        raise ValueError("Invalid membership ID format")
+        return Response({'error': 'Invalid membership ID format generated'}, status=400)
 
+    print(f"✅ Generated Membership ID: {gen_membership_id}")
+
+    # Create new member
     member = Member.objects.create(
         email=email,
         first_name=first_name,
@@ -138,11 +158,14 @@ def register_member(request):
         state=state,
         lga=lga,
         password=password,
-        membership_id= gen_membership_id,  # your custom function
-
+        membership_id=gen_membership_id,
     )
 
+    # Generate JWT tokens
     refresh = RefreshToken.for_user(member)
+
+    print("🎉 Member created successfully:", member.membership_id)
+
     return Response({
         "user": {
             "id": member.id,
@@ -153,12 +176,10 @@ def register_member(request):
             "lga": member.lga,
             "kycStatus": member.kycStatus,
             "paymentStatus": member.paymentStatus,
-
         },
         "refresh": str(refresh),
         "access": str(refresh.access_token),
     }, status=201)
-
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -721,8 +742,9 @@ def upload_passport(file_obj: InMemoryUploadedFile, folder: str = "kyc/passport_
         print(f"❌ Supabase upload error: {e}")
         return None
 
-class KYCSubmissionView_agent(APIView):
-    permission_classes = [AllowAny]
+
+class KYCSubmissionView(APIView):
+    permission_classes = [AllowAny]  # 👈 anyone can access
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request, *args, **kwargs):
@@ -730,66 +752,73 @@ class KYCSubmissionView_agent(APIView):
             data = request.data
             files = request.FILES
 
+            # Debugging received payloads
             print("====== DEBUG START ======")
-            print("📩 Raw request data:", data)
-            print("📸 Raw request files:", files)
-            print("👉 AGENT ID received:", data.get('agent_id'))
+            print("Raw request data:", data)
+            print("Raw request files:", files)
+            print("Membership ID received:", data.get('membership_id'))
+            print("Passport photo received:", files.get('passportPhoto'))
             print("====== DEBUG END ======")
 
             # Extract fields
             first_name = data.get('firstName')
             last_name = data.get('lastName')
+            phone_number = data.get('phoneNumber')
             gender = data.get('gender')
             DOB = data.get('DOB')
-            phone_number = data.get('phoneNumber')
-            agent_id = data.get('agent_id')
             nin = data.get('nin')
+            address = data.get('address')
+            state = data.get('state')
+            lga = data.get('lga')
             farmingSeason = data.get('farmingSeason')
             farmingCommunity = data.get('farmingCommunity')
             ward = data.get('ward')
             education = data.get('education')
             secondary_commodity = data.get('secondaryCommodity')
-            address = data.get('address')
-            state = data.get('state')
-            lga = data.get('lga')
             farm_type = data.get('farmType')
             farm_size = data.get('farmSize')
             years_of_experience = data.get('yearsOfExperience')
             primary_commodity = data.get('primaryCommodity')
             farm_location = data.get('farmLocation')
             passport_photo = files.get('passportPhoto')
+            membership_id = data.get('membership_id')
+            farmcoordinates = data.get('farmCoordinates')
+            farmAssociation = data.get('farmAssociation')
+            farmDocument = farm_location.get('idDocument')
 
-            if not agent_id:
-                return Response({"error": "agent_id is required"}, status=400)
+            # Extra check for membership_id being readonly
+            if not membership_id:
+                print("⚠️ Membership ID is missing from request!")
+            else:
+                print("✅ Membership ID included:", membership_id)
 
-            # Validate agent exists
-            try:
-                agent = AgentMember.objects.get(agent_id=agent_id)
-            except AgentMember.DoesNotExist:
-                return Response({"error": "Agent not found"}, status=404)
-
-            # Generate membership_id
-            membership_id = gen_membership_id_func(state, lga)
-
-            # ✅ Upload passport photo to Supabase if provided
-            passport_url = None
+                # ✅ Upload passport photo to Supabase if provided
+                passport_url = None
             if passport_photo:
                 ext = passport_photo.name.split('.')[-1]
                 file_name = f"{membership_id}_passport.{ext}"
                 passport_url = upload_passport(passport_photo, file_name)
 
-            # ✅ Create KYC record
+                farmDocument_url = None
+            if farmDocument:
+                ext = farmDocument.name.split('.')[-1]
+                file_name = f"{membership_id}_farmdoc.{ext}"
+                farmDocument_url = upload_passport(farmDocument, file_name)
+            # Debug uploaded URLs
+            print("Uploaded passport URL:", passport_url)
+            print("Uploaded farm document URL:", farmDocument_url)
+            # Create record
             kyc = KYCSubmission.objects.create(
                 firstName=first_name,
                 lastName=last_name,
+                gender = gender,
+                DOB = DOB,
+                farmingSeason = farmingSeason,
+                farmingCommunity = farmingCommunity,
+                ward = ward,
+                education = education,
+                secondaryCrops = secondary_commodity,
                 phoneNumber=phone_number,
-                gender=gender,
-                DOB=DOB,
-                farmingSeason=farmingSeason,
-                farmingCommunity=farmingCommunity,
-                ward=ward,
-                education=education,
-                secondaryCrops=secondary_commodity,
                 nin=nin,
                 address=address,
                 state=state,
@@ -801,37 +830,25 @@ class KYCSubmissionView_agent(APIView):
                 farmLocation=farm_location,
                 passportPhoto=passport_url if passport_url else None,
                 membership_id=membership_id,
-                agent_id=agent_id,
-                kycStatus="approved",
+                kycStatus="approved",  # default status
+                farmCoordinates=farmcoordinates,
+                farmAssociation=farmAssociation,
+                farmDocument=farmDocument_url if farmDocument_url else None,
             )
+            # update member record where membership_id matches
+            member = Member.objects.get(membership_id=membership_id)
+            member.kycStatus = "approved"
+            member.save()
 
-            # ✅ Create linked Member (email only required here)
-            email = f"{membership_id.lower()}@afannigeria.com"
-            Member.objects.create(
-                first_name=first_name,
-                last_name=last_name,
-                state=state,
-                lga=lga,
-                membership_id=membership_id,
-                kycStatus="approved",
-                paymentStatus="not_paid",
-                password="farmer123",
-                email=email,
-            )
 
             return Response(
-                {
-                    "message": "Farmer record submission successful",
-                    "id": kyc.membership_id,
-                    "passportPhoto": passport_url,
-                },
+                {"message": "Farmer record submission successful", "id": kyc.membership_id},
                 status=status.HTTP_201_CREATED
             )
 
         except Exception as e:
             print("❌ ERROR in KYCSubmissionView:", str(e))
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
 
 from rest_framework.response import Response
 from rest_framework import status
