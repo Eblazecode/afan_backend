@@ -159,7 +159,7 @@ def register_member(request):
         lga=lga,
         password=password,
         membership_id=gen_membership_id,
-        kycStatus="approved",
+
     )
 
     # Generate JWT tokens
