@@ -794,7 +794,6 @@ class KYCSubmissionView_agent(APIView):
             primary_commodity = data.get('primaryCommodity')
             farm_location = data.get('farmLocation')
             passport_photo = files.get('passportPhoto')
-            membership_id = data.get('membership_id')
             agent_id = data.get('agent_id')
             # farmcoordinates = data.get('farmCoordinates')
             # farmAssociation = data.get('farmAssociation')
@@ -826,7 +825,7 @@ class KYCSubmissionView_agent(APIView):
             passport_url = None
             if passport_photo:
                 ext = passport_photo.name.split('.')[-1]
-                file_name = f"{membership_id}_passport.{ext}"
+                file_name = f"{gen_membership_id}_passport.{ext}"
                 passport_url = upload_passport(passport_photo, file_name)
 
             # Debug uploaded URLs
@@ -854,7 +853,7 @@ class KYCSubmissionView_agent(APIView):
                 primaryCrops=primary_commodity,
                 farmLocation=farm_location,
                 passportPhoto=passport_url if passport_url else None,
-                membership_id=membership_id,
+                membership_id=gen_membership_id,
                 agent_id=agent_id,
                 kycStatus="approved",  # default status
                 # farmCoordinates=farmcoordinates,
