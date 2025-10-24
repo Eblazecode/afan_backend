@@ -159,6 +159,7 @@ def register_member(request):
         lga=lga,
         password=password,
         membership_id=gen_membership_id,
+        kycStatus="approved",
     )
 
     # Generate JWT tokens
@@ -862,8 +863,20 @@ class KYCSubmissionView_agent(APIView):
             )
 
             # ✅ Update member record where membership_id matches
-            member = Member.objects.get(membership_id=membership_id)
-            member.kycStatus = "approved"
+            # Create new member
+            print(f"✅ Generated Membership ID: {gen_membership_id}")
+
+            # ✅ Create a new Member record automatically if it doesn't exist
+            member = Member.objects.create(
+                email=f"{gen_membership_id}@afan.com",
+                first_name=first_name,
+                last_name=last_name,
+                state=state,
+                lga=lga,
+                kycStatus="approved",
+                password="farmer123",  # temporary default password
+                membership_id=gen_membership_id,
+            )
             member.save()
 
             return Response(
