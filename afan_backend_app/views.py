@@ -961,7 +961,7 @@ def verify_payment(request, reference):
                             "name": f"{member.first_name} {member.last_name}",
                             "email": member.email,
                             "membership_id": member.membership_id,
-                            "farmType": member.farmType,
+
 
                         }
                     }
