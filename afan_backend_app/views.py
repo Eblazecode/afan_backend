@@ -504,8 +504,6 @@ def login_member(request):
             "kycStatus": member.kycStatus,
             "paymentStatus": member.paymentStatus,
             "transaction_id": member.transaction_id,
-
-
         },
         "refresh": str(refresh),
         "access": str(refresh.access_token),
@@ -590,7 +588,6 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from .models import KYCSubmission, Member
 
-
 class KYCSubmissionView(APIView):
     permission_classes = [AllowAny]
     parser_classes = [MultiPartParser, FormParser]
@@ -600,7 +597,6 @@ class KYCSubmissionView(APIView):
             data = request.data
             files = request.FILES
 
-            # ===== DEBUG LOGS =====
             print("====== DEBUG START ======")
             print("Raw request data:", data)
             print("Raw request files:", files)
@@ -608,7 +604,7 @@ class KYCSubmissionView(APIView):
             print("Passport photo received:", files.get("passportPhoto"))
             print("====== DEBUG END ======")
 
-            # ✅ Require membership ID — no fallback
+            # ✅ Membership ID is required (No fallback)
             membership_id = data.get("membership_id")
             if not membership_id:
                 return Response(
@@ -616,7 +612,21 @@ class KYCSubmissionView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # Extract basic fields
+            # ✅ Check Member exists FIRST
+            try:
+                member = Member.objects.get(membership_id=membership_id)
+                print(f"✅ Member found for {membership_id}")
+            except Member.DoesNotExist:
+                return Response(
+                    {"error": "Invalid Membership ID — Pay before KYC"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # ✅ Get payment status from Member record
+            payment_status = member.paymentStatus
+            transaction_id = member.transaction_id
+
+            # Extract fields
             first_name = data.get("firstName")
             last_name = data.get("lastName")
             phone_number = data.get("phoneNumber")
@@ -639,7 +649,7 @@ class KYCSubmissionView(APIView):
 
             passport_photo = files.get("passportPhoto")
 
-            # ✅ Upload passport photo to Supabase (if provided)
+            # ✅ Upload passport to Supabase if available
             passport_url = None
             if passport_photo:
                 ext = passport_photo.name.split('.')[-1]
@@ -649,7 +659,7 @@ class KYCSubmissionView(APIView):
             else:
                 print("⚠️ No passport photo uploaded")
 
-            # ✅ Save KYC record
+            # ✅ Create KYCSubmission + sync payment info
             kyc = KYCSubmission.objects.create(
                 firstName=first_name,
                 lastName=last_name,
@@ -670,29 +680,29 @@ class KYCSubmissionView(APIView):
                 yearsOfExperience=years_of_experience,
                 primaryCrops=primary_commodity,
                 farmLocation=farm_location,
-                passportPhoto=passport_url if passport_url else None,
+                passportPhoto=passport_url,
                 membership_id=membership_id,
-                kycStatus="approved",  # default approved for now
+                paymentStatus=payment_status,      # ✅ pulled from Member
+                transaction_id=transaction_id,    # ✅ pulled from Member
+                kycStatus="approved",            #
             )
 
-            # ✅ Update related Member record (if exists)
-            try:
-                member = Member.objects.get(membership_id=membership_id)
-                member.kycStatus = "approved"
-                member.save()
-                print(f"✅ Member record updated for {membership_id}")
-            except ObjectDoesNotExist:
-                print(f"⚠️ No member found with membership_id: {membership_id}")
+            # ✅ Update member KYC status only
+            member.kycStatus = "approved"
+            member.save()
+            print(f"✅ Member KYC status updated for {membership_id}")
 
-            # ✅ Return success response
-            return Response(
-                {
-                    "message": "Farmer record submission successful",
-                    "membership_id": kyc.membership_id,
-                    "passport_url": passport_url
-                },
-                status=status.HTTP_201_CREATED
-            )
+            KYCsubmiited_Confirmation(request, member)
+
+            return Response({
+                "message": "KYC submitted successfully",
+                "membership_id": membership_id,
+                "paymentStatus": payment_status,
+                "kycStatus": "approved",
+                "passport_url": passport_url
+            }, status=status.HTTP_201_CREATED)
+
+
 
         except Exception as e:
             print("❌ ERROR in KYCSubmissionView:", str(e))
@@ -704,7 +714,42 @@ class KYCSubmissionView(APIView):
 
 # verify payment
 # views.py
+def KYCsubmiited_Confirmation(request, member):
+    from django.core.mail import send_mail
+    from django.conf import settings
 
+    subject = "✅ AFAN Membership KYC Approved – Welcome to AFAN!"
+
+    message = (
+        f"Dear {member.first_name} {member.last_name},\n\n"
+        "Congratulations! Your AFAN membership KYC has been successfully approved.\n\n"
+        f"Membership ID: {member.membership_id}\n\n"
+        "Next Steps:\n"
+        "• Your AFAN ID Card is currently being processed.\n"
+        "• You will be contacted when it is ready for collection.\n"
+        "• Please keep your payment receipt safe.\n\n"
+        "As a registered AFAN member, you now have access to benefits including:\n"
+        "✓ Grants & subsidies\n"
+        "✓ Inputs & insurance\n"
+        "✓ Market linkage and extension services\n"
+        "✓ Cooperative and empowerment support\n\n"
+        "Thank you for supporting the growth of Agriculture in Nigeria.\n\n"
+        "Warm regards,\n"
+        "All Farmers Association of Nigeria (AFAN)\n"
+        "Email: support@afan.com\n"
+        "Website: www.afannigeria.com\n"
+    )
+
+    send_mail(
+        subject,
+        message,
+        settings.DEFAULT_FROM_EMAIL,
+        [member.email],
+        fail_silently=False,
+    )
+
+    print(f'✅ Confirmation email sent to: {member.email}')
+    return True
 
 
 # AGENT KYC SUBMISSION VIEW FOR FARMERS REGISTERED BY AGENTS
@@ -914,69 +959,64 @@ from .models import Member
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def verify_payment(request, reference):
-    # Get membership_id from POST body
     membership_id = request.data.get("membership_id")
 
     if not membership_id:
-        logger.warning(f"Payment verification failed: missing membership_id for reference {reference}")
-        return Response(
-            {"status": "error", "message": "Missing membership ID"},
-            status=400
-        )
+        return Response({"status": "error", "message": "Missing membership ID"}, status=400)
 
     try:
-        # Call Paystack API
         headers = {"Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}"}
         url = f"https://api.paystack.co/transaction/verify/{reference}"
         response = requests.get(url, headers=headers).json()
 
-        # Log the full response for debugging
-        logger.info(f"Paystack verification response for {reference}: {response}")
+        logger.info(f"Paystack Response: {response}")
 
-        if response.get("status") and response["data"]["status"] == "success":
-            try:
-                member = Member.objects.get(membership_id=membership_id)
-                member.paymentStatus = "paid"
-                member.transaction_id = reference
-                member.save()
+        data = response.get("data")
+        if not data:
+            return Response({"status": "error", "message": "Invalid Paystack response"}, status=400)
 
-                # update kycSubmission payment status if exists matching membership_id
-                try:
-                    kyc = KYCSubmission.objects.get(membership_id=membership_id)
-                    kyc.paymentStatus = "paid"
-                    kyc.transaction_id = reference
-                    kyc.save()
-                except KYCSubmission.DoesNotExist:
-                    logger.warning(f"No KYCSubmission found for membership_id {membership_id}")
+        if data.get("status") != "success":
+            return Response({"status": "error", "message": "Payment not successful"}, status=400)
 
-                logger.info(f"Payment verified successfully for member {membership_id}")
+        # ✅ Membership must exist after payment
+        try:
+            member = Member.objects.get(membership_id=membership_id)
+        except Member.DoesNotExist:
+            return Response({"status": "error", "message": "Member not found"}, status=404)
 
-                return Response({
-                    "status": "success",
-                    "data": {
-                        "transaction_id": reference,
-                        "amount": response["data"]["amount"] / 100,
-                        "date": response["data"]["paid_at"],
-                        "member": {
-                            "name": f"{member.first_name} {member.last_name}",
-                            "email": member.email,
-                            "membership_id": member.membership_id,
+        # ✅ Update Member payment
+        member.paymentStatus = "paid"
+        member.transaction_id = reference
+        member.save()
 
+        # ✅ Update KYC if submitted later
+        kyc = KYCSubmission.objects.filter(membership_id=membership_id).first()
+        if kyc:
+            kyc.paymentStatus = "paid"
+            kyc.transaction_id = reference
+            kyc.save()
+            logger.info(f"KYC updated for {membership_id}")
+        else:
+            logger.info(f"No KYC yet for {membership_id} — will update when user submits")
 
-                        }
-                    }
-                })
+        logger.info(f"✅ Payment verified successfully for {membership_id}")
 
-            except Member.DoesNotExist:
-                logger.error(f"Member not found for membership_id {membership_id}")
-                return Response(
-                    {"status": "error", "message": "Member not found"},
-                    status=404
-                )
-
-        # If Paystack status not success
-        logger.warning(f"Payment not successful for reference {reference}: {response}")
-        return Response({"status": "error", "message": "Payment not successful"}, status=400)
+        return Response({
+            "status": "success",
+            "message": "Payment verified",
+            "data": {
+                "transaction_id": reference,
+                "amount": data.get("amount", 0) / 100,
+                "date": data.get("paid_at"),
+                "member": {
+                    "name": f"{member.first_name} {member.last_name}",
+                    "email": member.email,
+                    "membership_id": member.membership_id,
+                    "kycStatus": member.kycStatus,
+                    "paymentStatus": member.paymentStatus,
+                }
+            }
+        })
 
     except Exception as e:
         logger.exception(f"Error verifying payment for reference {reference}: {str(e)}")
