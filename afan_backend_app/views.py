@@ -1729,6 +1729,9 @@ class FarmerDetailView(View):
             "farmLocation": farmer.farmLocation,
             "passportPhoto": farmer.passportPhoto,
             "membership_id": farmer.membership_id,
+            "transaction_id": farmer.transaction_id,
+            "kycStatus": farmer.kycStatus,
+            "paymentStatus": farmer.paymentStatus,
         }
 
         print("📤 Farmer data prepared successfully")
