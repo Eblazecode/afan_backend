@@ -840,8 +840,8 @@ class KYCSubmissionView_agent(APIView):
             farm_location = data.get('farmLocation')
             passport_photo = files.get('passportPhoto')
             agent_id = data.get('agent_id')
-            # farmcoordinates = data.get('farmCoordinates')
-            # farmAssociation = data.get('farmAssociation')
+            farmcoordinates = data.get('farmCoordinates')
+            farmAssociation = data.get('farmAssociation')
             # farmDocument = farm_location.get('idDocument')
 
             # ✅ Clean state and LGA abbreviations
@@ -901,8 +901,8 @@ class KYCSubmissionView_agent(APIView):
                 membership_id=gen_membership_id,
                 agent_id=agent_id,
                 kycStatus="approved",  # default status
-                # farmCoordinates=farmcoordinates,
-                # farmAssociation=farmAssociation,
+                farmCoordinates=farmcoordinates,
+                farmAssociation=farmAssociation,
                 # farmDocument=farmDocument_url if farmDocument_url else None,
             )
 
