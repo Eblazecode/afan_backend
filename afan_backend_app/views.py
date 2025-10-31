@@ -1710,6 +1710,14 @@ from .models import KYCSubmission, Member
 import json
 
 
+from django.views import View
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.http import JsonResponse
+from .models import KYCSubmission, Member
+import json
+
+
 @method_decorator(csrf_exempt, name='dispatch')
 class FarmerDetailView(View):
 
@@ -1721,6 +1729,7 @@ class FarmerDetailView(View):
         farmer = None
         source = None
 
+        # ✅ Step 1: Try KYCSubmission first
         try:
             farmer = KYCSubmission.objects.get(membership_id=membership_id)
             source = "KYCSubmission"
@@ -1735,6 +1744,7 @@ class FarmerDetailView(View):
                 print("❌ Not found in both tables")
                 return JsonResponse({"error": "Farmer not found"}, status=404)
 
+        # ✅ Build response
         if source == "KYCSubmission":
             data = {
                 "firstName": farmer.firstName,
@@ -1762,7 +1772,6 @@ class FarmerDetailView(View):
                 "kycStatus": farmer.kycStatus,
                 "paymentStatus": farmer.paymentStatus,
             }
-
         else:  # source == "Member"
             data = {
                 "firstName": farmer.first_name,
@@ -1782,14 +1791,14 @@ class FarmerDetailView(View):
         return JsonResponse(data, safe=False, status=200)
 
     def put(self, request, membership_id):
-        """Update a farmer record and mirror changes both ways between KYCSubmission and Member"""
+        """Update farmer record and mirror both ways safely"""
         print("\n====== DEBUG: UPDATE FARMER START ======")
         print(f"📩 Incoming membership_id: {membership_id}")
 
         farmer = None
         source = None
 
-        # ✅ Check KYCSubmission first
+        # ✅ Step 1: Find source model
         try:
             farmer = KYCSubmission.objects.get(membership_id=membership_id)
             source = "KYCSubmission"
@@ -1798,33 +1807,31 @@ class FarmerDetailView(View):
             try:
                 farmer = Member.objects.get(membership_id=membership_id)
                 source = "Member"
-                print(f"✅ Found in Member table for update: {farmer.first_name} {farmer.last_name}")
+                print(f"✅ Found in Member for update: {farmer.first_name} {farmer.last_name}")
             except Member.DoesNotExist:
-                print("❌ Not found in either table")
+                print("❌ Not found in either table. Farmer is yet to register ")
                 return JsonResponse({"error": "Farmer not found"}, status=404)
 
-        # ✅ Parse incoming data
+        # ✅ Step 2: Parse incoming JSON
         try:
             body = json.loads(request.body.decode('utf-8'))
             print(f"🧾 Incoming JSON body: {body}")
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON"}, status=400)
 
+        # ✅ Step 3: Update main source record
         updated_fields = []
-
-        # ✅ Update whichever model was found
         for field, value in body.items():
             if hasattr(farmer, field):
                 setattr(farmer, field, value)
                 updated_fields.append(field)
-
         farmer.save()
         print(f"✅ Updated fields in {source}: {updated_fields}")
 
-        # ✅ Mirror the updates to the other model
+        # ✅ Step 4: Mirror logic
         if source == "KYCSubmission":
-            # Mirror into Member
-            member, created = Member.objects.get_or_create(membership_id=membership_id)
+            # Always mirror into Member
+            member, _ = Member.objects.get_or_create(membership_id=membership_id)
             mirror_map = {
                 "first_name": getattr(farmer, "firstName", member.first_name),
                 "last_name": getattr(farmer, "lastName", member.last_name),
@@ -1837,28 +1844,31 @@ class FarmerDetailView(View):
                 if hasattr(member, field):
                     setattr(member, field, val)
             member.save()
-            print(f"🔄 Mirrored updates from KYCSubmission → Member for {membership_id}")
+            print(f"🔄 Mirrored from KYCSubmission → Member for {membership_id}")
 
         elif source == "Member":
-            # Mirror into KYCSubmission
-            kyc, created = KYCSubmission.objects.get_or_create(membership_id=membership_id)
-            mirror_map = {
-                "firstName": getattr(farmer, "first_name", kyc.firstName),
-                "lastName": getattr(farmer, "last_name", kyc.lastName),
-                "state": farmer.state,
-                "lga": farmer.lga,
-                "kycStatus": getattr(farmer, "kycStatus", kyc.kycStatus),
-                "paymentStatus": getattr(farmer, "paymentStatus", kyc.paymentStatus),
-            }
-            for field, val in mirror_map.items():
-                if hasattr(kyc, field):
-                    setattr(kyc, field, val)
-            kyc.save()
-            print(f"🔁 Mirrored updates from Member → KYCSubmission for {membership_id}")
+            # Mirror into KYCSubmission ONLY if exists
+            if KYCSubmission.objects.filter(membership_id=membership_id).exists():
+                kyc = KYCSubmission.objects.get(membership_id=membership_id)
+                mirror_map = {
+                    "firstName": getattr(farmer, "first_name", kyc.firstName),
+                    "lastName": getattr(farmer, "last_name", kyc.lastName),
+                    "state": farmer.state,
+                    "lga": farmer.lga,
+                    "kycStatus": getattr(farmer, "kycStatus", kyc.kycStatus),
+                    "paymentStatus": getattr(farmer, "paymentStatus", kyc.paymentStatus),
+                }
+                for field, val in mirror_map.items():
+                    if hasattr(kyc, field):
+                        setattr(kyc, field, val)
+                kyc.save()
+                print(f"🔁 Mirrored from Member → KYCSubmission for {membership_id}")
+            else:
+                print(f"ℹ️ No KYCSubmission found for {membership_id}, skipping mirror.")
 
         print("====== DEBUG: UPDATE FARMER END ======\n")
         return JsonResponse(
-            {"message": f"Farmer record updated successfully in {source} and mirrored."},
+            {"message": f"Farmer updated successfully in {source}."},
             status=200
         )
 

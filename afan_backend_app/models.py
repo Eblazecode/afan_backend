@@ -146,6 +146,8 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 import re
 
+from django.db import models
+
 class KYCSubmission(models.Model):
     FARM_TYPES = [
         ('Crop Farming', 'Crop Farming'),
@@ -158,46 +160,55 @@ class KYCSubmission(models.Model):
         ('Other', 'Other'),
     ]
 
-    firstName = models.CharField(max_length=100)
-    lastName = models.CharField(max_length=100)
+    # ===== BASIC INFO =====
+    firstName = models.CharField(max_length=100, blank=True, null=True)
+    lastName = models.CharField(max_length=100, blank=True, null=True)
     agent_id = models.CharField(max_length=50, blank=True, null=True)
-    phoneNumber = models.CharField(max_length=11)
-    gender =models.CharField(max_length=11, default="gender")
-    DOB = models.DateField( blank=True, null=True)
-    nin = models.CharField(max_length=11, unique=True, blank=True, null=True, default=None)
-    education = models.CharField(max_length=100, blank=True, null=True, default=None)
-    position = models.CharField(max_length=500, default="member", blank=True, null=True)
-    address = models.TextField(max_length=500, default="address", blank=True, null=True )
-    state = models.CharField(max_length=100)
-    lga = models.CharField(max_length=100)
-    ward= models.CharField(max_length=100, blank=True, null=True)
-    farmingCommunity = models.CharField(max_length=100,default="Farming community")
-    farmingSeason = models.CharField(max_length=100,default="Farming season")
-    farmType = models.CharField(max_length=50, choices=FARM_TYPES)
-    farmSize = models.DecimalField(max_digits=10, decimal_places=2)
-    yearsOfExperience = models.PositiveIntegerField()
-    primaryCrops = models.CharField(max_length=255)
+    phoneNumber = models.CharField(max_length=11, blank=True, null=True)
+    gender = models.CharField(max_length=11, default="Not specified", blank=True, null=True)
+    DOB = models.DateField(blank=True, null=True)
+    nin = models.CharField(max_length=11, unique=True, blank=True, null=True)
+    education = models.CharField(max_length=100, blank=True, null=True)
+    position = models.CharField(max_length=100, default="member", blank=True, null=True)
+
+    # ===== LOCATION =====
+    address = models.TextField(max_length=500, blank=True, null=True)
+    state = models.CharField(max_length=100, blank=True, null=True)
+    lga = models.CharField(max_length=100, blank=True, null=True)
+    ward = models.CharField(max_length=100, blank=True, null=True)
+
+    # ===== FARM DETAILS =====
+    farmingCommunity = models.CharField(max_length=100, blank=True, null=True)
+    farmingSeason = models.CharField(max_length=100, blank=True, null=True)
+    farmType = models.CharField(max_length=50, choices=FARM_TYPES, blank=True, null=True)
+    farmSize = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    yearsOfExperience = models.PositiveIntegerField(blank=True, null=True)
+    primaryCrops = models.CharField(max_length=255, blank=True, null=True)
     secondaryCrops = models.CharField(max_length=255, blank=True, null=True)
-    farmLocation = models.TextField()
+    farmLocation = models.TextField(blank=True, null=True)
+
+    # ===== DOCUMENTS & PHOTOS =====
     passportPhoto = models.URLField(max_length=500, blank=True, null=True)
-    submittedAt = models.DateTimeField(auto_now_add=True)
-    membership_id = models.CharField(max_length=50, unique=True, blank=True, null=True)
-    kycStatus = models.CharField(max_length=20, default='not_submitted')  # KYC status
-    paymentStatus = models.CharField(max_length=20, default='not_paid')  # Payment status
-    transaction_id = models.CharField(max_length=100, blank=True, null=True)
     farmCoordinates = models.TextField(blank=True, null=True)
     farmAssociation = models.TextField(blank=True, null=True)
     farmDocument = models.TextField(blank=True, null=True)
 
+    # ===== META =====
+    submittedAt = models.DateTimeField(auto_now_add=True)
+    membership_id = models.CharField(max_length=50, unique=True, blank=True, null=True)
+    transaction_id = models.CharField(max_length=100, blank=True, null=True)
+
+    # ===== STATUS =====
+    kycStatus = models.CharField(max_length=20, default='not_submitted', blank=True, null=True)
+    paymentStatus = models.CharField(max_length=20, default='not_paid', blank=True, null=True)
+
     def __str__(self):
-        return f"{self.firstName} {self.lastName} - {self.phoneNumber}"
+        name = f"{self.firstName or ''} {self.lastName or ''}".strip()
+        return f"{name or 'Unnamed'} - {self.phoneNumber or 'No Phone'}"
 
-
-
-    # display the membership ID to frontend
     def get_membership_id(self):
+        """Return membership ID for frontend display"""
         return self.membership_id if self.membership_id else "Not Assigned"
-    # -*- coding: utf-8 -*-
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
