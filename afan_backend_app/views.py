@@ -1557,6 +1557,7 @@ def admin_fetch_all_farmers(request):
             "farmLocation": f.farmLocation,
             "state": f.state,
             "gender":f.gender,
+            "education": f.education,
             "DOB": f.DOB,
             "lga": f.lga,
             "position":f.position,
