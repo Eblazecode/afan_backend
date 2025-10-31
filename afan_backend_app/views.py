@@ -1700,7 +1700,7 @@ from .models import KYCSubmission
 import json
 
 
-@method_decorator(csrf_exempt, name='dispatch')
+
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
