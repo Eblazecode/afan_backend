@@ -1528,21 +1528,20 @@ from supabase import create_client
 import os
 
 
+from django.db.models import Count
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def admin_fetch_all_farmers(request):
     farmers = KYCSubmission.objects.all().order_by('-submittedAt')
-    farmer_list = []
 
-    # ✅ Default fallback (Supabase public URL for default.png)
     default_passport_url = supabase.storage.from_(SUPABASE_BUCKET_NAME).get_public_url(
         "kyc/passport_photos/default.png"
     )
 
+    farmer_list = []
     for f in farmers:
         passport_url = f.passportPhoto if f.passportPhoto else default_passport_url
-
-        #
 
         farmer_list.append({
             "membership_id": f.membership_id,
@@ -1556,22 +1555,53 @@ def admin_fetch_all_farmers(request):
             "yearsOfExperience": f.yearsOfExperience,
             "farmLocation": f.farmLocation,
             "state": f.state,
-            "gender":f.gender,
+            "gender": f.gender,
             "education": f.education,
             "DOB": f.DOB,
             "lga": f.lga,
-            "position":f.position,
-            "primaryCrops":f.primaryCrops,
-            "secondaryCrops":f.secondaryCrops,
-            "ward":f.ward,
+            "position": f.position,
+            "primaryCrops": f.primaryCrops,
+            "secondaryCrops": f.secondaryCrops,
+            "ward": f.ward,
             "passportPhoto": passport_url,
             "submissiondate": f.submittedAt,
             "agent_id": f.agent_id,
         })
 
+    # --- Farmers Analytics ---
+    farmers_by_state = (
+        KYCSubmission.objects.values("state")
+        .annotate(count=Count("id"))
+        .order_by("-count")
+    )
+
+    farmers_by_lga = (
+        KYCSubmission.objects.values("lga")
+        .annotate(count=Count("id"))
+        .order_by("-count")
+    )
+
+    gender_distribution = (
+        KYCSubmission.objects.values("gender")
+        .annotate(count=Count("id"))
+        .order_by("-count")
+    )
+
+    education_distribution = (
+        KYCSubmission.objects.values("education")
+        .annotate(count=Count("id"))
+        .order_by("-count")
+    )
+
     return Response({
         "data": farmer_list,
-        "count": len(farmer_list)
+        "count": len(farmer_list),
+        "analytics": {
+            "by_state": farmers_by_state,
+            "by_lga": farmers_by_lga,
+            "gender": gender_distribution,
+            "education": education_distribution,
+        }
     })
 
 
@@ -2049,3 +2079,176 @@ def delete_agent(request, id):
     except Exception as e:
         print("🚨 Unexpected error:", str(e))
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
+from django.db.models import Q
+from .models import AgentMember, KYCSubmission
+
+
+
+class StandardResultsSetPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def admin_dashboard_overview(request):
+    """
+    Admin Dashboard API
+    Combines Agent + Farmer analytics in one response.
+    Optional filters:
+      - ?state=Abuja
+      - ?lga=Bwari
+      - ?ward=Kubwa
+      - ?agent_id=AGT/ABJ/001
+      - ?page=1
+      - ?page_size=10
+    """
+
+    state = request.GET.get('state')
+    lga = request.GET.get('lga')
+    ward = request.GET.get('ward')
+    agent_id = request.GET.get('agent_id')
+
+    # === Default passport fallback === #
+    default_passport_url = supabase.storage.from_(SUPABASE_BUCKET_NAME).get_public_url(
+        "kyc/passport_photos/default.png"
+    )
+
+    # ===================== AGENTS ANALYTICS ====================== #
+    agents = AgentMember.objects.all().order_by('-registration_date')
+    if state:
+        agents = agents.filter(state__iexact=state)
+    if lga:
+        agents = agents.filter(lga__iexact=lga)
+    if ward:
+        agents = agents.filter(ward__iexact=ward)
+    if agent_id:
+        agents = agents.filter(agent_id__iexact=agent_id)
+
+    agent_list = []
+    for a in agents:
+        farmers_registered = KYCSubmission.objects.filter(agent=a).count()
+        farmers_paid = KYCSubmission.objects.filter(agent=a, paymentStatus='paid').count()
+        farmers_unpaid = KYCSubmission.objects.filter(agent=a, paymentStatus='not_paid').count()
+
+        agent_list.append({
+            "agent_id": a.agent_id,
+            "name": f"{a.first_name} {a.last_name}",
+            "state": a.state,
+            "lga": a.lga,
+            "ward": a.ward,
+            "gender": a.gender,
+            "education": a.education,
+            "farmers_registered": farmers_registered,
+            "farmers_paid": farmers_paid,
+            "farmers_unpaid": farmers_unpaid,
+            "status": a.approval_status,
+            "passportPhoto": getattr(a, "passportPhoto", default_passport_url),
+        })
+
+    # ===================== FARMERS ANALYTICS ====================== #
+    farmers = KYCSubmission.objects.all().order_by('-submittedAt')
+    if state:
+        farmers = farmers.filter(state__iexact=state)
+    if lga:
+        farmers = farmers.filter(lga__iexact=lga)
+    if ward:
+        farmers = farmers.filter(ward__iexact=ward)
+    if agent_id:
+        farmers = farmers.filter(agent__agent_id__iexact=agent_id)
+
+    # Pagination for farmers table
+    paginator = StandardResultsSetPagination()
+    paginated_farmers = paginator.paginate_queryset(farmers, request)
+
+    farmer_list = []
+    for f in paginated_farmers:
+        passport_url = f.passportPhoto if f.passportPhoto else default_passport_url
+        farmer_list.append({
+            "membership_id": f.membership_id,
+            "name": f"{f.firstName} {f.lastName}",
+            "phoneNumber": f.phoneNumber,
+            "status": f.kycStatus,
+            "registeredAt": f.submittedAt,
+            "paymentStatus": f.paymentStatus,
+            "farmType": f.farmType,
+            "farmSize": f.farmSize,
+            "yearsOfExperience": f.yearsOfExperience,
+            "farmLocation": f.farmLocation,
+            "state": f.state,
+            "lga": f.lga,
+            "ward": f.ward,
+            "gender": f.gender,
+            "education": f.education,
+            "DOB": f.DOB,
+            "primaryCrops": f.primaryCrops,
+            "secondaryCrops": f.secondaryCrops,
+            "agent_id": f.agent.agent_id if f.agent else None,
+            "passportPhoto": passport_url,
+        })
+
+    # ===================== GLOBAL ANALYTICS ====================== #
+    farmer_filter = Q()
+    if state:
+        farmer_filter &= Q(agent__state__iexact=state)
+    if lga:
+        farmer_filter &= Q(agent__lga__iexact=lga)
+    if ward:
+        farmer_filter &= Q(agent__ward__iexact=ward)
+    if agent_id:
+        farmer_filter &= Q(agent__agent_id__iexact=agent_id)
+
+    total_agents = len(agent_list)
+    total_farmers = KYCSubmission.objects.filter(farmer_filter).count()
+    total_paid = KYCSubmission.objects.filter(farmer_filter, paymentStatus='paid').count()
+    total_unpaid = KYCSubmission.objects.filter(farmer_filter, paymentStatus='not_paid').count()
+
+    analytics_summary = {
+        "total_agents": total_agents,
+        "total_farmers": total_farmers,
+        "total_paid": total_paid,
+        "total_unpaid": total_unpaid,
+    }
+
+    # ===================== CHART DATA ====================== #
+    chart_data = [
+        {
+            "name": a['name'],
+            "farmers_registered": a['farmers_registered'],
+            "farmers_paid": a['farmers_paid'],
+            "farmers_unpaid": a['farmers_unpaid'],
+        }
+        for a in agent_list
+    ]
+
+    # ===================== RESPONSE ====================== #
+    return Response({
+        "filters_applied": {
+            "state": state,
+            "lga": lga,
+            "ward": ward,
+            "agent_id": agent_id,
+        },
+        "analytics_summary": analytics_summary,
+        "agents": agent_list,
+        "farmers": {
+            "results": farmer_list,
+            "count": farmers.count(),
+            "pagination": {
+                "current_page": paginator.page.number,
+                "total_pages": paginator.page.paginator.num_pages,
+                "page_size": paginator.get_page_size(request),
+            },
+        },
+        "chart_data": chart_data,
+        "count": total_agents
+    })
