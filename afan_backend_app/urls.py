@@ -51,6 +51,7 @@ path(
     path('admin_fetch_farmers/', views.admin_fetch_all_farmers, name='admin_fetch_all_farmers'),
     path('admin_fetch_agents/', views.admin_fetch_all_agents, name='admin_fetch_all_agents'),
     path("verify/<path:membership_id>/", views.verify_farmer, name="verify_farmer"),
+    path('admin_fetch_all_agents/', views.admin_fetch_all_agents, name='admin_fetch_all_agents'),
 
     # update farmers records
     path('kyc/fetch/<path:membership_id>/', FarmerDetailView.as_view(), name='fetch_farmer'),
