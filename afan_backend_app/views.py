@@ -1576,46 +1576,65 @@ def admin_fetch_all_farmers(request):
 
 
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from django.db.models import Count, Q
+from .models import AgentMember, KYCSubmission
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def admin_fetch_all_agents(request):
     agents = AgentMember.objects.all().order_by('-registration_date')
     agents_list = []
 
-    # ✅ Default fallback (Supabase public URL for default.png)
+    # ✅ Default fallback passport
     default_passport_url = supabase.storage.from_(SUPABASE_BUCKET_NAME).get_public_url(
         "kyc/passport_photos/default.png"
     )
-    # passport_url = a.passportPhoto if a.passportPhoto else default_passport_url
 
     for a in agents:
-
-        #
+        # Farmer analytics for each agent
+        total_farmers = KYCSubmission.objects.filter(agent_id=a.agent_id).count()
+        paid_farmers = KYCSubmission.objects.filter(agent_id=a.agent_id, paymentStatus='paid').count()
+        unpaid_farmers = KYCSubmission.objects.filter(agent_id=a.agent_id, paymentStatus='not_paid').count()
 
         agents_list.append({
             "agent_id": a.agent_id,
             "name": f"{a.first_name} {a.last_name}",
             "phoneNumber": a.phoneNumber,
             "state": a.state,
-            "lga": a.lga,
-            "ward": a.ward,
+            "lga": a.lga,  # ✅ Added LGA
+            "ward": a.ward,  # ✅ Added Ward
             "registration_date": a.registration_date,
             "email": a.email,
             "DOB": a.DOB,
-            "gender":a.gender,
+            "gender": a.gender,
             "education": a.education,
             "nin": a.nin,
-            "status":a.approval_status,
-
-
-
+            "status": a.approval_status,
+            "total_farmers": total_farmers,   # ✅ New metric
+            "paid_farmers": paid_farmers,     # ✅ New metric
+            "unpaid_farmers": unpaid_farmers, # ✅ New metric
+            "passportPhoto": getattr(a, "passportPhoto", default_passport_url),
         })
-    #    "passportPhoto": passport_url,
+
+    # Return summary too
+    overall_total = sum(a["total_farmers"] for a in agents_list)
+    overall_paid = sum(a["paid_farmers"] for a in agents_list)
+    overall_unpaid = sum(a["unpaid_farmers"] for a in agents_list)
+
     return Response({
+        "summary": {
+            "total_agents": len(agents_list),
+            "total_farmers": overall_total,
+            "paid_farmers": overall_paid,
+            "unpaid_farmers": overall_unpaid,
+        },
         "data": agents_list,
         "count": len(agents_list)
     })
-
 
 # views.py
 from rest_framework.decorators import api_view, permission_classes
