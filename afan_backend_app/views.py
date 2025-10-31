@@ -1588,7 +1588,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from django.db.models import Q
 from .models import AgentMember, KYCSubmission
-from .supabase_client import supabase, SUPABASE_BUCKET_NAME
+
 
 
 @api_view(['GET'])
