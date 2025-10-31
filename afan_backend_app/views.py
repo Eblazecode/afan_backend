@@ -162,6 +162,12 @@ def register_member(request):
 
     )
 
+
+    # create new record in the KYCsubmissision model
+    Kyc_member = Member.objects.create(
+        email=email,
+        membership_id=gen_membership_id,
+    )
     # Generate JWT tokens
     refresh = RefreshToken.for_user(member)
 
@@ -659,6 +665,7 @@ class KYCSubmissionView(APIView):
             else:
                 print("⚠️ No passport photo uploaded")
 
+            # check for membership_id , if it exist farmer continues else you cant register for
             # ✅ Create KYCSubmission + sync payment info
             kyc = KYCSubmission.objects.create(
                 firstName=first_name,
@@ -693,6 +700,7 @@ class KYCSubmissionView(APIView):
             print(f"✅ Member KYC status updated for {membership_id}")
 
             KYCsubmiited_Confirmation(request, member)
+
 
             return Response({
                 "message": "KYC submitted successfully",
@@ -1691,86 +1699,169 @@ from django.shortcuts import get_object_or_404
 from .models import KYCSubmission
 import json
 
+
+@method_decorator(csrf_exempt, name='dispatch')
+from django.views import View
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from .models import KYCSubmission, Member
+import json
+
+
 @method_decorator(csrf_exempt, name='dispatch')
 class FarmerDetailView(View):
 
     def get(self, request, membership_id):
-        """Fetch a farmer by membership_id with debug logs"""
+        """Fetch a farmer by membership_id — first check KYCSubmission, fallback to Member"""
         print("\n====== DEBUG: FETCH FARMER START ======")
         print(f"📩 Incoming membership_id: {membership_id}")
 
+        farmer = None
+        source = None
+
         try:
-            farmer = get_object_or_404(KYCSubmission, membership_id=membership_id)
-            print(f"✅ Farmer found: {farmer.firstName} {farmer.lastName} ({farmer.membership_id})")
-        except Exception as e:
-            print(f"❌ ERROR fetching farmer: {e}")
-            print("====== DEBUG: FETCH FARMER END ======\n")
-            return JsonResponse({"error": "Farmer not found"}, status=404)
+            farmer = KYCSubmission.objects.get(membership_id=membership_id)
+            source = "KYCSubmission"
+            print(f"✅ Found in {source}: {farmer.firstName} {farmer.lastName}")
+        except KYCSubmission.DoesNotExist:
+            print("⚠️ Not found in KYCSubmission — checking Member...")
+            try:
+                farmer = Member.objects.get(membership_id=membership_id)
+                source = "Member"
+                print(f"✅ Found in {source}: {farmer.first_name} {farmer.last_name}")
+            except Member.DoesNotExist:
+                print("❌ Not found in both tables")
+                return JsonResponse({"error": "Farmer not found"}, status=404)
 
-        data = {
-            "firstName": farmer.firstName,
-            "lastName": farmer.lastName,
-            "phoneNumber": farmer.phoneNumber,
-            "nin": farmer.nin,
-            "education": farmer.education,
-            "gender": farmer.gender,
-            "DOB": farmer.DOB,
-            "address": farmer.address,
-            "state": farmer.state,
-            "lga": farmer.lga,
-            "ward": farmer.ward,
-            "farmingCommunity": farmer.farmingCommunity,
-            "farmingSeason": farmer.farmingSeason,
-            "farmType": farmer.farmType,
-            "farmSize": str(farmer.farmSize),
-            "yearsOfExperience": farmer.yearsOfExperience,
-            "primaryCrops": farmer.primaryCrops,
-            "secondaryCrops": farmer.secondaryCrops,
-            "farmLocation": farmer.farmLocation,
-            "passportPhoto": farmer.passportPhoto,
-            "membership_id": farmer.membership_id,
-            "transaction_id": farmer.transaction_id,
-            "kycStatus": farmer.kycStatus,
-            "paymentStatus": farmer.paymentStatus,
-        }
+        if source == "KYCSubmission":
+            data = {
+                "firstName": farmer.firstName,
+                "lastName": farmer.lastName,
+                "phoneNumber": farmer.phoneNumber,
+                "nin": farmer.nin,
+                "education": farmer.education,
+                "gender": farmer.gender,
+                "DOB": farmer.DOB,
+                "address": farmer.address,
+                "state": farmer.state,
+                "lga": farmer.lga,
+                "ward": farmer.ward,
+                "farmingCommunity": farmer.farmingCommunity,
+                "farmingSeason": farmer.farmingSeason,
+                "farmType": farmer.farmType,
+                "farmSize": str(farmer.farmSize),
+                "yearsOfExperience": farmer.yearsOfExperience,
+                "primaryCrops": farmer.primaryCrops,
+                "secondaryCrops": farmer.secondaryCrops,
+                "farmLocation": farmer.farmLocation,
+                "passportPhoto": str(farmer.passportPhoto),
+                "membership_id": farmer.membership_id,
+                "transaction_id": farmer.transaction_id,
+                "kycStatus": farmer.kycStatus,
+                "paymentStatus": farmer.paymentStatus,
+            }
 
-        print("📤 Farmer data prepared successfully")
+        else:  # source == "Member"
+            data = {
+                "firstName": farmer.first_name,
+                "lastName": farmer.last_name,
+                "email": farmer.email,
+                "state": farmer.state,
+                "lga": farmer.lga,
+                "membership_id": farmer.membership_id,
+                "kycStatus": getattr(farmer, "kycStatus", "Not Submitted"),
+                "paymentStatus": getattr(farmer, "paymentStatus", "unpaid"),
+                "transaction_id": getattr(farmer, "transaction_id", None),
+                "note": "Fetched from Member table",
+            }
+
+        print(f"📤 Data prepared from {source}")
         print("====== DEBUG: FETCH FARMER END ======\n")
-
         return JsonResponse(data, safe=False, status=200)
 
     def put(self, request, membership_id):
-        """Update a farmer record with debug logs"""
+        """Update a farmer record and mirror changes both ways between KYCSubmission and Member"""
         print("\n====== DEBUG: UPDATE FARMER START ======")
         print(f"📩 Incoming membership_id: {membership_id}")
 
-        try:
-            farmer = get_object_or_404(KYCSubmission, membership_id=membership_id)
-            print(f"✅ Farmer found for update: {farmer.firstName} {farmer.lastName}")
-        except Exception as e:
-            print(f"❌ ERROR fetching farmer for update: {e}")
-            print("====== DEBUG: UPDATE FARMER END ======\n")
-            return JsonResponse({"error": "Farmer not found"}, status=404)
+        farmer = None
+        source = None
 
+        # ✅ Check KYCSubmission first
+        try:
+            farmer = KYCSubmission.objects.get(membership_id=membership_id)
+            source = "KYCSubmission"
+            print(f"✅ Found in KYCSubmission for update: {farmer.firstName} {farmer.lastName}")
+        except KYCSubmission.DoesNotExist:
+            try:
+                farmer = Member.objects.get(membership_id=membership_id)
+                source = "Member"
+                print(f"✅ Found in Member table for update: {farmer.first_name} {farmer.last_name}")
+            except Member.DoesNotExist:
+                print("❌ Not found in either table")
+                return JsonResponse({"error": "Farmer not found"}, status=404)
+
+        # ✅ Parse incoming data
         try:
             body = json.loads(request.body.decode('utf-8'))
             print(f"🧾 Incoming JSON body: {body}")
-        except json.JSONDecodeError as e:
-            print(f"❌ JSON decode error: {e}")
-            print("====== DEBUG: UPDATE FARMER END ======\n")
+        except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON"}, status=400)
 
         updated_fields = []
+
+        # ✅ Update whichever model was found
         for field, value in body.items():
             if hasattr(farmer, field):
                 setattr(farmer, field, value)
                 updated_fields.append(field)
 
         farmer.save()
-        print(f"✅ Updated fields: {updated_fields}")
-        print("====== DEBUG: UPDATE FARMER END ======\n")
+        print(f"✅ Updated fields in {source}: {updated_fields}")
 
-        return JsonResponse({"message": "Farmer record updated successfully!"}, status=200)
+        # ✅ Mirror the updates to the other model
+        if source == "KYCSubmission":
+            # Mirror into Member
+            member, created = Member.objects.get_or_create(membership_id=membership_id)
+            mirror_map = {
+                "first_name": getattr(farmer, "firstName", member.first_name),
+                "last_name": getattr(farmer, "lastName", member.last_name),
+                "state": farmer.state,
+                "lga": farmer.lga,
+                "kycStatus": farmer.kycStatus,
+                "paymentStatus": farmer.paymentStatus,
+            }
+            for field, val in mirror_map.items():
+                if hasattr(member, field):
+                    setattr(member, field, val)
+            member.save()
+            print(f"🔄 Mirrored updates from KYCSubmission → Member for {membership_id}")
+
+        elif source == "Member":
+            # Mirror into KYCSubmission
+            kyc, created = KYCSubmission.objects.get_or_create(membership_id=membership_id)
+            mirror_map = {
+                "firstName": getattr(farmer, "first_name", kyc.firstName),
+                "lastName": getattr(farmer, "last_name", kyc.lastName),
+                "state": farmer.state,
+                "lga": farmer.lga,
+                "kycStatus": getattr(farmer, "kycStatus", kyc.kycStatus),
+                "paymentStatus": getattr(farmer, "paymentStatus", kyc.paymentStatus),
+            }
+            for field, val in mirror_map.items():
+                if hasattr(kyc, field):
+                    setattr(kyc, field, val)
+            kyc.save()
+            print(f"🔁 Mirrored updates from Member → KYCSubmission for {membership_id}")
+
+        print("====== DEBUG: UPDATE FARMER END ======\n")
+        return JsonResponse(
+            {"message": f"Farmer record updated successfully in {source} and mirrored."},
+            status=200
+        )
+
 
 
 
