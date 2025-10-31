@@ -1583,57 +1583,112 @@ from django.db.models import Count, Q
 from .models import AgentMember, KYCSubmission
 
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from django.db.models import Q
+from .models import AgentMember, KYCSubmission
+from .supabase_client import supabase, SUPABASE_BUCKET_NAME
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def admin_fetch_all_agents(request):
-    agents = AgentMember.objects.all().order_by('-registration_date')
-    agents_list = []
+    """
+    Fetch all agents + analytics summary.
+    Optional filters:
+      - ?state=Abuja
+      - ?lga=Bwari
+      - ?ward=Kubwa
+      - ?agent_id=AGT/ABJ/001
+    """
+    state = request.GET.get('state')
+    lga = request.GET.get('lga')
+    ward = request.GET.get('ward')
+    agent_id = request.GET.get('agent_id')
 
-    # ✅ Default fallback passport
+    agents = AgentMember.objects.all().order_by('-registration_date')
+
+    # Apply filters dynamically
+    if state:
+        agents = agents.filter(state__iexact=state)
+    if lga:
+        agents = agents.filter(lga__iexact=lga)
+    if ward:
+        agents = agents.filter(ward__iexact=ward)
+    if agent_id:
+        agents = agents.filter(agent_id__iexact=agent_id)
+
+    agents_list = []
     default_passport_url = supabase.storage.from_(SUPABASE_BUCKET_NAME).get_public_url(
         "kyc/passport_photos/default.png"
     )
 
     for a in agents:
-        # Farmer analytics for each agent
-        total_farmers = KYCSubmission.objects.filter(agent_id=a.agent_id).count()
-        paid_farmers = KYCSubmission.objects.filter(agent_id=a.agent_id, paymentStatus='paid').count()
-        unpaid_farmers = KYCSubmission.objects.filter(agent_id=a.agent_id, paymentStatus='not_paid').count()
+        farmers_registered = KYCSubmission.objects.filter(agent=a).count()
+        farmers_paid = KYCSubmission.objects.filter(agent=a, payment_status='paid').count()
+        farmers_unpaid = KYCSubmission.objects.filter(agent=a, payment_status='not_paid').count()
 
         agents_list.append({
             "agent_id": a.agent_id,
             "name": f"{a.first_name} {a.last_name}",
-            "phoneNumber": a.phoneNumber,
             "state": a.state,
-            "lga": a.lga,  # ✅ Added LGA
-            "ward": a.ward,  # ✅ Added Ward
-            "registration_date": a.registration_date,
-            "email": a.email,
-            "DOB": a.DOB,
+            "lga": a.lga,
+            "ward": a.ward,
             "gender": a.gender,
             "education": a.education,
-            "nin": a.nin,
+            "farmers_registered": farmers_registered,
+            "farmers_paid": farmers_paid,
+            "farmers_unpaid": farmers_unpaid,
             "status": a.approval_status,
-            "total_farmers": total_farmers,   # ✅ New metric
-            "paid_farmers": paid_farmers,     # ✅ New metric
-            "unpaid_farmers": unpaid_farmers, # ✅ New metric
-            "passportPhoto": getattr(a, "passportPhoto", default_passport_url),
+            "passportPhoto": getattr(a, "passportPhoto", default_passport_url)
         })
 
-    # Return summary too
-    overall_total = sum(a["total_farmers"] for a in agents_list)
-    overall_paid = sum(a["paid_farmers"] for a in agents_list)
-    overall_unpaid = sum(a["unpaid_farmers"] for a in agents_list)
+    # Global analytics (or filtered region/agent)
+    total_agents = len(agents_list)
+    farmer_filter = Q()
+    if state:
+        farmer_filter &= Q(agent__state__iexact=state)
+    if lga:
+        farmer_filter &= Q(agent__lga__iexact=lga)
+    if ward:
+        farmer_filter &= Q(agent__ward__iexact=ward)
+    if agent_id:
+        farmer_filter &= Q(agent__agent_id__iexact=agent_id)
+
+    total_farmers = KYCSubmission.objects.filter(farmer_filter).count()
+    total_paid = KYCSubmission.objects.filter(farmer_filter, payment_status='paid').count()
+    total_unpaid = KYCSubmission.objects.filter(farmer_filter, payment_status='not_paid').count()
+
+    analytics_summary = {
+        "total_agents": total_agents,
+        "total_farmers": total_farmers,
+        "total_paid": total_paid,
+        "total_unpaid": total_unpaid,
+    }
+
+    # Chart-ready dataset
+    chart_data = [
+        {
+            "name": a['name'],
+            "farmers_registered": a['farmers_registered'],
+            "farmers_paid": a['farmers_paid'],
+            "farmers_unpaid": a['farmers_unpaid'],
+        }
+        for a in agents_list
+    ]
 
     return Response({
-        "summary": {
-            "total_agents": len(agents_list),
-            "total_farmers": overall_total,
-            "paid_farmers": overall_paid,
-            "unpaid_farmers": overall_unpaid,
+        "filters_applied": {
+            "state": state,
+            "lga": lga,
+            "ward": ward,
+            "agent_id": agent_id,
         },
         "data": agents_list,
-        "count": len(agents_list)
+        "analytics": analytics_summary,
+        "chart_data": chart_data,
+        "count": total_agents
     })
 
 # views.py
