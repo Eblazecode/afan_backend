@@ -77,6 +77,21 @@ from rest_framework.permissions import AllowAny
 
 
 
+from rest_framework.response import Response
+from rest_framework import status
+
+def block_unapproved_agents(view_func):
+    def wrapper(request, *args, **kwargs):
+        user = request.user
+        if user.role == "agent" and user.approval_status in ["pending", "suspended", "deleted"]:
+            return Response({
+                "detail": "Access denied. Your account is not approved.",
+                "forceLogout": True,
+                "status": user.approval_status
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
 def gen_membership_id_func(state, lga):
     import re
     prefix = "AFAN"
@@ -188,25 +203,7 @@ def register_member(request):
         "access": str(refresh.access_token),
     }, status=201)
 
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
-from django.db import transaction
-from django.db.utils import IntegrityError
-import re
 
-from .models import AgentMember, Member
-
-
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
-from rest_framework_simplejwt.tokens import RefreshToken
-from django.db import transaction, IntegrityError
-from django.utils import timezone
-import re
-from .models import AgentMember, Member  # Adjust if in same or different file
 
 import random
 import time
@@ -262,7 +259,7 @@ def register_agent(request):
 
     # Check suspended or pending agents
     existing_agent = AgentMember.objects.filter(
-        nin=nin, approval_status__in=['suspended', 'pending']
+        nin=nin, approval_status__in=['suspended', 'pending', 'deleted']
     ).first()
     if existing_agent:
         print(f"⚠️ Existing agent found with status: {existing_agent.approval_status}")
@@ -366,6 +363,7 @@ from .models import AgentMember
 
 
 
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_agent(request):
@@ -380,20 +378,14 @@ def login_agent(request):
     except AgentMember.DoesNotExist:
         return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
 
-    # 🔐 Check password
-    # Debugging: check password
-    is_valid_password = check_password(password, agent.password)
-    logger.debug(f"Password check for {email}: {is_valid_password}")
+    # ✅ Password validation
+    if not check_password(password, agent.password):
+        return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
 
-    if not is_valid_password:
-        logger.warning(f"Invalid password attempt for email: {email}")
-        return Response({'error': 'Invalid email or password'}, status=401)
-
-
-    # ✅ Generate token only if approved
+    # ✅ Generate token regardless of status, but add status flag
     refresh = RefreshToken.for_user(agent)
 
-    return Response({
+    response_data = {
         "user": {
             "id": agent.id,
             "name": f"{agent.first_name} {agent.last_name}".strip(),
@@ -402,14 +394,16 @@ def login_agent(request):
             "state": agent.state,
             "lga": agent.lga,
             "role": "agent",
+            "approval_status": agent.approval_status,  # ✅ IMPORTANT
             "kycStatus": agent.kycStatus,
             "paymentStatus": agent.paymentStatus,
             "transaction_id": agent.transaction_id,
-            "approval_status": agent.approval_status,
         },
         "refresh": str(refresh),
         "access": str(refresh.access_token),
-    }, status=status.HTTP_200_OK)
+    }
+
+    return Response(response_data, status=status.HTTP_200_OK)
 
 
 
@@ -809,6 +803,8 @@ def upload_passport(file_obj: InMemoryUploadedFile, folder: str = "kyc/passport_
     except Exception as e:
         print(f"❌ Supabase upload error: {e}")
         return None
+
+
 
 class KYCSubmissionView_agent(APIView):
     permission_classes = [AllowAny]  # 👈 anyone can access
@@ -2252,3 +2248,7 @@ def admin_dashboard_overview(request):
         "chart_data": chart_data,
         "count": total_agents
     })
+
+
+
+
