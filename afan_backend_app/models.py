@@ -298,11 +298,14 @@ class BOA(models.Model):
     # -*- coding: utf-8 -*-
 
 
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.shortcuts import get_object_or_404
-from django.utils.decorators import method_decorator
-from django.views import View
-import json
-from .models import KYCSubmission
 
+# models.py
+class PendingPayment(models.Model):
+    agent_id = models.IntegerField()
+    farmer_name = models.CharField(max_length=100)
+    phone_number = models.CharField(max_length=20)
+    temp_reference = models.CharField(max_length=100, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.farmer_name} ({self.phone_number})"

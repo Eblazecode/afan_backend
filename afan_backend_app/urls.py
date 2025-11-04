@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from . import views
-from .views import FarmerDetailView
+from .views import FarmerDetailView, QuickProfileKYC_agent, Agent_finalize_KYC
 from .views import MemberViewSet, register_member, get_user_profile, KYCSubmissionView, KYCSubmissionView_agent, \
     verify_payment, register_agent, get_farmers_by_agent, agent_get_payment_receipt, agent_payment_callback, \
     admin_register
@@ -65,6 +65,14 @@ path(
 
     path('agentforgot_password/', views.agent_forgot_password, name='forgot-password'),
     path('agentreset_password/<int:user_id>/<str:token>/', views.agent_reset_password, name='reset-password'),
+    path('create_temp_member/', views.create_temp_member, name='create_temp_member'),
+    path('finalize_kyc/', views.agent_finalize_kyc, name='finalize_kyc'),
+    path('member/<path:membership_id>/', views.get_member, name='get_member'),
+# verify_agent_payment already exists at 'agent/verify-payment/<reference>/'
+
+    path('quickkyc/agent/', QuickProfileKYC_agent.as_view(), name='kyc-agent'),
+    path('finalizekyc/agent/', Agent_finalize_KYC.as_view(), name='kyc-agent'),
+
 
 
 ]
