@@ -1668,6 +1668,7 @@ def admin_fetch_all_agents(request):
             "lga": a.lga,
             "ward": a.ward,
             "gender": a.gender,
+            "phoneNumber": a.phoneNumber,
             "education": a.education,
             "farmers_registered": farmers_registered,
             "farmers_paid": farmers_paid,
