@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from . import views
-from .views import FarmerDetailView, QuickProfileKYC_agent, Agent_finalize_KYC
+from .views import FarmerDetailView, QuickProfileKYC_agent, Agent_finalize_KYC, ProfileKYC_verify_paymentStatus
 from .views import MemberViewSet, register_member, get_user_profile, KYCSubmissionView, KYCSubmissionView_agent, \
     verify_payment, register_agent, get_farmers_by_agent, agent_get_payment_receipt, agent_payment_callback, \
     admin_register
@@ -72,6 +72,7 @@ path(
 
     path('quickkyc/agent/', QuickProfileKYC_agent.as_view(), name='kyc-agent'),
     path('finalizekyc/agent/', Agent_finalize_KYC.as_view(), name='kyc-agent'),
+    path('verifypayment/agent/<path:membership_id>/',  ProfileKYC_verify_paymentStatus.as_view(), name='verify-payment'),
 
 
 
