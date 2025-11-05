@@ -2395,7 +2395,7 @@ class ProfileKYC_verify_paymentStatus(APIView):
 
             return Response({
                 "membership_id": membership_id,
-                "paymentStatus": "paid" if payment_record.is_paid else "unpaid",
+                "paymentStatus": "paid" if payment_record.paymentStatus else "not_paid",
                 "reference": payment_record.transaction_id,
             }, status=200)
 
