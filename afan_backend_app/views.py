@@ -2336,11 +2336,11 @@ class QuickProfileKYC_agent(APIView):
                 # farmDocument=farmDocument_url if farmDocument_url else None,
             )
 
-            # ✅ Update member record where membership_id matches
+            # Update member record where membership_id matches
             # Create new member
-            print(f"✅ Generated Membership ID: {gen_membership_id}")
+            print(f" Generated Membership ID: {gen_membership_id}")
 
-            # ✅ Create a new Member record automatically if it doesn't exist
+            #  Create a new Member record automatically if it doesn't exist
             member = Member.objects.create(
                 email=f"{gen_membership_id}@afan.com",
                 first_name=first_name,
@@ -2368,38 +2368,41 @@ class QuickProfileKYC_agent(APIView):
 
 
 
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from .models import KYCSubmission
+
 class ProfileKYC_verify_paymentStatus(APIView):
     permission_classes = [AllowAny]
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request, membership_id, *args, **kwargs):
         try:
-            membership_id = request.data.get("membership_id")
-
             if not membership_id:
                 return Response({"error": "membership_id is required"}, status=400)
 
-            print(f"🔍 Verifying payment for: {membership_id}")
+            print(f"🔍 Verifying payment for membership_id from URL: {membership_id}")
 
-            # ✅ Example: Check payment table
+            # Check payment table
             payment_record = KYCSubmission.objects.filter(membership_id=membership_id).first()
 
             if not payment_record:
                 return Response({
                     "membership_id": membership_id,
                     "paymentStatus": "unpaid",
-                    "message": "No payment record found please pay first"
+                    "message": "No payment record found. Please pay first."
                 }, status=200)
 
             return Response({
                 "membership_id": membership_id,
                 "paymentStatus": "paid" if payment_record.is_paid else "unpaid",
                 "reference": payment_record.transaction_id,
-
             }, status=200)
 
         except Exception as e:
             print("❌ ERROR in verify_paymentStatus:", str(e))
             return Response({"error": str(e)}, status=400)
+
 
 class Agent_finalize_KYC(APIView):
     permission_classes = [AllowAny]
@@ -2444,10 +2447,10 @@ class Agent_finalize_KYC(APIView):
             if passport_url:
                 kyc.passportPhoto = passport_url
 
-            kyc.kycStatus = "approved"   # ✅ not approved automatically
+            kyc.kycStatus = "approved"   #  not approved automatically
             kyc.save()
 
-            # ✅ Update Member record too
+            #  Update Member record too
             Member.objects.update_or_create(
                 membership_id=membership_id,
                 defaults={
