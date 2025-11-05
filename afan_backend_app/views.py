@@ -2355,7 +2355,8 @@ class QuickProfileKYC_agent(APIView):
 
             return Response(
                 {"message": "Farmer record submission successful",
-                 "membership_id": kyc.membership_id
+                 "membership_id": kyc.membership_id,
+                 "id": kyc.membership_id
 
                  },
                 status=status.HTTP_201_CREATED
