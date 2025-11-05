@@ -2386,7 +2386,7 @@ class ProfileKYC_verify_paymentStatus(APIView):
                 return Response({
                     "membership_id": membership_id,
                     "paymentStatus": "unpaid",
-                    "message": "No payment record found"
+                    "message": "No payment record found please pay first"
                 }, status=200)
 
             return Response({
