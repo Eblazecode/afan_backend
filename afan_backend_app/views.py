@@ -2447,7 +2447,7 @@ class Agent_finalize_KYC(APIView):
             if passport_url:
                 kyc.passportPhoto = passport_url
 
-            kyc.kycStatus = "approved"   #  not approved automatically
+            kyc.kycStatus = "approved"   #  approved automatically
             kyc.save()
 
             #  Update Member record too
