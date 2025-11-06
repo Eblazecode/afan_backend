@@ -2283,9 +2283,10 @@ class QuickProfileKYC_agent(APIView):
                 if str(agent.approval_status).lower() != "approved":
                     return Response(
                         {
-                            "error": "Agent is not approved",
-                            "status": "pending_approval",
-                            "message": "Your AFAN agent account is still under review. You will be notified once approved."
+                            "error": "Your AFAN agent account is still under review/suspended"
+                                     "  Contact Admin for more info.",
+                            "status": "pending" if str(agent.approval_status).lower() == "pending" else "suspended" or "deleted",
+                            "message": "Your AFAN agent account is still under review . Contact Admin for more info.."
                         },
                         status=status.HTTP_403_FORBIDDEN
                     )
