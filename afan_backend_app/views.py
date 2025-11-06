@@ -2269,7 +2269,7 @@ class QuickProfileKYC_agent(APIView):
 
             # ✅ Check agent exists and is approved
             try:
-                agent = Agent.objects.filter(agent_id=agent_id).first()
+                agent = AgentMember.objects.filter(agent_id=agent_id).first()
 
                 if not agent:
                     return Response(
@@ -2281,7 +2281,7 @@ class QuickProfileKYC_agent(APIView):
                         status=status.HTTP_404_NOT_FOUND
                     )
 
-                if str(agent.status).lower() != "approved":
+                if str(agent.approval_status).lower() != "approved":
                     return Response(
                         {
                             "error": "Agent is not approved",
