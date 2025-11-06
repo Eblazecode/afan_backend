@@ -2248,9 +2248,16 @@ def get_member(request, membership_id):
         return Response({"error": "not found"}, status=404)
 
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.parsers import MultiPartParser, FormParser
+from .models import Agent, Member, KYCSubmission
+import re, random
+
 
 class QuickProfileKYC_agent(APIView):
-    permission_classes = [AllowAny]  # 👈 anyone can access
+    permission_classes = [AllowAny]
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request, *args, **kwargs):
@@ -2258,13 +2265,38 @@ class QuickProfileKYC_agent(APIView):
             data = request.data
             files = request.FILES
 
-            # Debugging received payloads
-            print("====== DEBUG START ======")
-            print("Raw request data:", data)
-            print("Raw request files:", files)
-            print("====== DEBUG END ======")
+            agent_id = data.get('agent_id')
 
-            # Extract fields
+            # ✅ Check agent exists and is approved
+            try:
+                agent = Agent.objects.filter(agent_id=agent_id).first()
+
+                if not agent:
+                    return Response(
+                        {
+                            "error": "Invalid agent ID",
+                            "status": "agent_not_found",
+                            "message": "The provided agent ID does not exist"
+                        },
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+
+                if str(agent.status).lower() != "approved":
+                    return Response(
+                        {
+                            "error": "Agent is not approved",
+                            "status": "pending_approval",
+                            "message": "Your AFAN agent account is still under review. You will be notified once approved."
+                        },
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+            except Exception as e:
+                return Response(
+                    {"error": f"Agent lookup failed: {str(e)}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # ✅ Extract other fields
             first_name = data.get('firstName')
             last_name = data.get('lastName')
             phone_number = data.get('phoneNumber')
@@ -2274,15 +2306,10 @@ class QuickProfileKYC_agent(APIView):
             address = data.get('address')
             state = data.get('state')
             lga = data.get('lga')
-
             ward = data.get('ward')
             education = data.get('education')
             secondary_commodity = data.get('secondaryCommodity')
-
             passport_photo = files.get('passportPhoto')
-            agent_id = data.get('agent_id')
-
-            # farmDocument = farm_location.get('idDocument')
 
             # ✅ Clean state and LGA abbreviations
             prefix = "AFAN"
@@ -2291,7 +2318,6 @@ class QuickProfileKYC_agent(APIView):
 
             # ✅ Generate unique 5-digit membership ID
             def generate_unique_number():
-                """Generate a truly unique 5-digit number that doesn't already exist."""
                 while True:
                     random_number = str(random.randint(10000, 99999))
                     gen_membership_id = f"{prefix}/{cleaned_state}/{cleaned_lga}/{random_number}"
@@ -2300,23 +2326,14 @@ class QuickProfileKYC_agent(APIView):
 
             gen_membership_id = generate_unique_number()
 
-            # ✅ Validate membership ID format
-            if not re.match(r"^AFAN/[A-Z]{3}/[A-Z]{3}/\d{5}$", gen_membership_id):
-                return Response({'error': 'Invalid membership ID format generated'}, status=400)
-
-            print(f"✅ Generated Membership ID: {gen_membership_id}")
-
-            # ✅ Upload passport photo to Supabase if provided
+            # ✅ Upload passport photo if provided
             passport_url = None
             if passport_photo:
                 ext = passport_photo.name.split('.')[-1]
                 file_name = f"{gen_membership_id}_passport.{ext}"
                 passport_url = upload_passport(passport_photo, file_name)
 
-            # Debug uploaded URLs
-            print("Uploaded passport URL:", passport_url)
-
-            # ✅ Create record
+            # ✅ Create KYC record
             kyc = KYCSubmission.objects.create(
                 firstName=first_name,
                 lastName=last_name,
@@ -2332,15 +2349,10 @@ class QuickProfileKYC_agent(APIView):
                 lga=lga,
                 membership_id=gen_membership_id,
                 agent_id=agent_id,
-                kycStatus="not_submitted",  # default status
-                # farmDocument=farmDocument_url if farmDocument_url else None,
+                kycStatus="not_submitted",
             )
 
-            # Update member record where membership_id matches
-            # Create new member
-            print(f" Generated Membership ID: {gen_membership_id}")
-
-            #  Create a new Member record automatically if it doesn't exist
+            # ✅ Create Member record
             member = Member.objects.create(
                 email=f"{gen_membership_id}@afan.com",
                 first_name=first_name,
@@ -2348,24 +2360,22 @@ class QuickProfileKYC_agent(APIView):
                 state=state,
                 lga=lga,
                 kycStatus="not_submitted",
-                password="farmer123",  # temporary default password
+                password="farmer123",
                 membership_id=gen_membership_id,
             )
-            member.save()
 
             return Response(
-                {"message": "Farmer record submission successful",
-                 "membership_id": kyc.membership_id,
-                 "id": kyc.membership_id
-
-                 },
+                {
+                    "message": "Farmer record submission successful",
+                    "membership_id": kyc.membership_id,
+                    "id": kyc.membership_id
+                },
                 status=status.HTTP_201_CREATED
             )
 
         except Exception as e:
             print("❌ ERROR in KYCSubmissionView:", str(e))
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
 
 
 from rest_framework.views import APIView
