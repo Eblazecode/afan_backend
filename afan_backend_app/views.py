@@ -109,13 +109,34 @@ def gen_membership_id_func(state, lga):
     return gen_membership_id  # ✅ return the value
 
 
-import random
-import re
+
+
+
+
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Member
+from django.db import IntegrityError, transaction
+from django.contrib.auth.hashers import make_password
+import random, re
+from .models import Member  # adjust to your actual path
+
+
+def generate_unique_membership_id(state, lga):
+    """Generate a truly unique AFAN membership ID."""
+    prefix = "AFAN"
+    cleaned_state = re.sub(r'\W+', '', str(state)).upper()[:3].ljust(3, 'X')
+    cleaned_lga = re.sub(r'\W+', '', str(lga)).upper()[:3].ljust(3, 'X')
+
+    for _ in range(10):  # retry up to 10 times
+        random_number = random.randint(10000, 99999)
+        gen_id = f"{prefix}/{cleaned_state}/{cleaned_lga}/{random_number}"
+        if not Member.objects.filter(membership_id=gen_id).exists():
+            return gen_id
+
+    raise ValueError("Failed to generate unique membership ID after 10 tries.")
 
 
 @api_view(['POST'])
@@ -128,80 +149,65 @@ def register_member(request):
     state = data.get('state')
     lga = data.get('lga')
 
-    print("📥 Received registration data:", data)  # Debugging
+    print("📥 Received registration data:", data)
 
-    # Validate required fields
+    # ✅ Validate required fields
     if not all([name, email, password, state, lga]):
         return Response({'error': 'Missing fields'}, status=400)
 
-    # Check if email already exists
+    # ✅ Check if email already exists
     if Member.objects.filter(email=email).exists():
         return Response({'error': 'User already exists'}, status=400)
 
-    # Split full name into first and last name
+    # ✅ Split full name into first/last
     parts = name.strip().split(" ", 1)
     first_name = parts[0]
     last_name = parts[1] if len(parts) > 1 else ""
 
-    # Clean state and LGA abbreviations
-    prefix = "AFAN"
-    cleaned_state = re.sub(r'\W+', '', str(state)).upper()[:3].ljust(3, 'X')
-    cleaned_lga = re.sub(r'\W+', '', str(lga)).upper()[:3].ljust(3, 'X')
+    try:
+        with transaction.atomic():
+            # ✅ Generate unique Membership ID
+            membership_id = generate_unique_membership_id(state, lga)
+            print(f"✅ Generated Membership ID: {membership_id}")
 
-    # Generate a unique random 5-digit number
-    def generate_unique_number():
-        """Generate a truly unique 5-digit number that doesn't already exist."""
-        while True:
-            random_number = str(random.randint(10000, 99999))
-            gen_membership_id = f"{prefix}/{cleaned_state}/{cleaned_lga}/{random_number}"
-            if not Member.objects.filter(membership_id=gen_membership_id).exists():
-                return gen_membership_id
+            # ✅ Create member safely
+            member = Member.objects.create(
+                email=email,
+                first_name=first_name,
+                last_name=last_name,
+                state=state,
+                lga=lga,
+                password=password,
+                membership_id=membership_id,
+            )
 
-    gen_membership_id = generate_unique_number()
+            # ✅ Generate JWT tokens
+            refresh = RefreshToken.for_user(member)
 
-    # Validate membership ID format
-    if not re.match(r"^AFAN/[A-Z]{3}/[A-Z]{3}/\d{5}$", gen_membership_id):
-        return Response({'error': 'Invalid membership ID format generated'}, status=400)
+            print("🎉 Member created successfully:", member.membership_id)
 
-    print(f"✅ Generated Membership ID: {gen_membership_id}")
+            return Response({
+                "user": {
+                    "id": member.id,
+                    "name": f"{member.first_name} {member.last_name}".strip(),
+                    "email": member.email,
+                    "membership_id": member.membership_id,
+                    "state": member.state,
+                    "lga": member.lga,
+                    "kycStatus": member.kycStatus,
+                    "paymentStatus": member.paymentStatus,
+                },
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+            }, status=201)
 
-    # Create new member
-    member = Member.objects.create(
-        email=email,
-        first_name=first_name,
-        last_name=last_name,
-        state=state,
-        lga=lga,
-        password=password,
-        membership_id=gen_membership_id,
+    except IntegrityError as e:
+        print("❌ Integrity error:", e)
+        return Response({'error': 'Duplicate membership or email conflict'}, status=400)
+    except Exception as e:
+        print("❌ Registration failed:", e)
+        return Response({'error': str(e)}, status=500)
 
-    )
-
-
-    # create new record in the KYCsubmissision model
-    Kyc_member = Member.objects.create(
-        email=email,
-        membership_id=gen_membership_id,
-    )
-    # Generate JWT tokens
-    refresh = RefreshToken.for_user(member)
-
-    print("🎉 Member created successfully:", member.membership_id)
-
-    return Response({
-        "user": {
-            "id": member.id,
-            "name": f"{member.first_name} {member.last_name}".strip(),
-            "email": member.email,
-            "membership_id": member.membership_id,
-            "state": member.state,
-            "lga": member.lga,
-            "kycStatus": member.kycStatus,
-            "paymentStatus": member.paymentStatus,
-        },
-        "refresh": str(refresh),
-        "access": str(refresh.access_token),
-    }, status=201)
 
 
 
